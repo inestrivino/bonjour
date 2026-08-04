@@ -1,0 +1,24 @@
+- /build
+  - /ci
+  - /package
+- /cmd
+  - main.go
+- /docs
+- /examples
+- /internal
+  - /config
+    - config.go
+    - config_test.go
+  - /i18n
+  - modules
+    - /events
+    - /quotes
+    - /rss
+    - /weather
+  - /ui
+- /scripts
+- .gitignore
+- go.mod
+- go.sum
+- LICENSE
+- README.md
