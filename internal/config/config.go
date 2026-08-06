@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/charmbracelet/huh"
+	"github.com/inestrivino/bonjour/internal/ui"
 )
 
 // A UserConfig is the user's preferences regarding themselves
@@ -24,11 +25,11 @@ type UserConfig struct {
 
 // A DashboardConfig is the user's preferences regarding the dashboard
 // Show certain modules (such as weather, quotes, rss...) or not
-// TODO: ALLOW CHOOSE THEME?
 type DashboardConfig struct {
-	ShowWeather bool `json:"show_weather"`
-	ShowQuotes  bool `json:"show_quotes"`
-	ShowRSS     bool `json:"show_rss"`
+	Theme       string `json:"theme"`
+	ShowWeather bool   `json:"show_weather"`
+	ShowQuotes  bool   `json:"show_quotes"`
+	ShowRSS     bool   `json:"show_rss"`
 }
 
 // An EventConfig is an event that the user wants to be reminded of
@@ -49,18 +50,19 @@ type Config struct {
 }
 
 // GetConfigPath returns a string with the path where the Config is stored. It may also return an error.
-func GetConfigPath() (string, error) {
-	home, err := os.UserHomeDir()
+func getConfigPath() (string, error) {
+	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "bonjour", "config.json"), nil
+	appCOnfigDir := filepath.Join(configDir, "bonjour", "config.json")
+	return appCOnfigDir, nil
 }
 
 // LoadOrRunWizard checks whether there is a configuration file or not. If there is not, it launches the configuration wizard for first-time users.
 // It returns a Config type object
 func LoadOrRunWizard() (*Config, error) {
-	configPath, err := GetConfigPath()
+	configPath, err := getConfigPath()
 	if err != nil {
 		return nil, fmt.Errorf("Error while trying to obtain the home directory: %w", err)
 	}
@@ -95,16 +97,19 @@ func initialWizard() (*Config, error) {
 	cfg := &Config{}
 	selectedModules := []string{"weather", "quotes", "rss"}
 
+	// We initialize the charm theme as default for the initial wizard
+	initialTheme := ui.NewTheme("charm")
+
 	form := huh.NewForm(
 		huh.NewGroup(
 			// UserConfig
 			huh.NewInput().
 				Title("What would you like to be called?").
-				Placeholder("María").
+				Placeholder("John Doe").
 				Value(&cfg.User.Name).
 				Validate(func(str string) error {
 					if len(str) == 0 {
-						return errors.New("Name can't be emtpy")
+						return errors.New("Name can't be empty")
 					}
 					return nil
 				}),
@@ -112,7 +117,7 @@ func initialWizard() (*Config, error) {
 			huh.NewInput().
 				Title("What is your location?").
 				Description("Optional. Leaving this blank disables weather features").
-				Placeholder("Madrid, Spain").
+				Placeholder("London, UK").
 				Value(&cfg.User.Location),
 
 			huh.NewSelect[string]().
@@ -134,8 +139,18 @@ func initialWizard() (*Config, error) {
 					huh.NewOption("News and RSS", "rss"),
 				).
 				Value(&selectedModules),
+
+			huh.NewSelect[string]().
+				Title("Select UI Theme:").
+				Options(
+					huh.NewOption("Charm (Default)", "charm"),
+					huh.NewOption("Dracula", "dracula"),
+					huh.NewOption("Catppuccin", "catppuccin"),
+					huh.NewOption("Base16", "base16"),
+				).
+				Value(&cfg.Dashboard.Theme),
 		),
-	).WithTheme(huh.ThemeCharm())
+	).WithTheme(initialTheme.HuhTheme)
 
 	err := form.Run()
 	if err != nil {
