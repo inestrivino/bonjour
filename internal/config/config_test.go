@@ -17,8 +17,9 @@ func TestSaveAndLoadConfig(t *testing.T) {
 	// Sample mock configuration
 	originalCfg := &Config{
 		User: UserConfig{
-			Name:     "TestUser",
-			Location: "Madrid",
+			Name:      "TestUser",
+			Latitude:  40.4165,
+			Longitude: -3.70256,
 		},
 		Dashboard: DashboardConfig{
 			ShowWeather: true,

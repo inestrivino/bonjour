@@ -10,16 +10,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/huh"
+	"github.com/inestrivino/bonjour/internal/modules/weather"
 	"github.com/inestrivino/bonjour/internal/ui"
 )
 
 // A UserConfig is the user's preferences regarding themselves
 // Preferred name, preferred location
 type UserConfig struct {
-	Name     string `json:"name"`
-	Location string `json:"location"`
+	Name      string  `json:"name"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 // A DashboardConfig is the user's preferences regarding the dashboard
@@ -99,9 +102,16 @@ func initialWizard() (*Config, error) {
 	// We initialize the charm theme as default for the initial wizard
 	initialTheme := ui.NewTheme("charm")
 
+	// variables to perform the geolocation api call for weather services
+	var (
+		inputCity    string
+		inputCountry string
+		inputAdmin   string
+	)
+
 	form := huh.NewForm(
 		huh.NewGroup(
-			// UserConfig
+			// User name
 			huh.NewInput().
 				Title("What would you like to be called?").
 				Placeholder("John Doe").
@@ -112,13 +122,45 @@ func initialWizard() (*Config, error) {
 					}
 					return nil
 				}),
+		),
+		// Location conf
+		huh.NewGroup(
+			huh.NewInput().
+				Title("City Name").
+				Description("Optional. Leave blank to disable weather features.").
+				Placeholder("Paris").
+				Value(&inputCity),
 
 			huh.NewInput().
-				Title("What is your location?").
-				Description("Optional. Leaving this blank disables weather features").
-				Placeholder("London, UK").
-				Value(&cfg.User.Location),
+				Title("Country").
+				Description("Optional (e.g., Spain, France, UK, ES)").
+				Placeholder("France").
+				Value(&inputCountry),
 
+			huh.NewInput().
+				Title("Administrative Area").
+				Description("Optional (e.g., Texas, Île-de-France, Catalunya)").
+				Placeholder("Île-de-France").
+				Value(&inputAdmin).
+				Validate(func(_ string) error {
+					// Validate the combination when the user hits Enter on the final input
+					if strings.TrimSpace(inputCity) == "" {
+						return nil // Skip weather setup if city is left blank
+					}
+
+					loc, err := weather.ResolveLocation(inputCity, inputCountry, inputAdmin)
+					if err != nil {
+						return err // Returns error allowing user to adjust inputs
+					}
+
+					// Save matched results directly into config
+					cfg.User.Latitude = loc.Latitude
+					cfg.User.Longitude = loc.Longitude
+
+					return nil
+				}),
+		),
+		huh.NewGroup(
 			// DashboardConfig
 			huh.NewMultiSelect[string]().
 				Title("Select the dashboard modules you want to activate:").
