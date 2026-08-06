@@ -1,5 +1,8 @@
 package weather
 
+// Weather data provided by Open-Meteo API (https://open-meteo.com/)
+// Free for non-commercial use under CC BY 4.0.
+
 import (
 	"encoding/json"
 	"fmt"

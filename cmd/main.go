@@ -7,6 +7,7 @@ import (
 
 	"github.com/inestrivino/bonjour/internal/config"
 	"github.com/inestrivino/bonjour/internal/modules/quotes"
+	"github.com/inestrivino/bonjour/internal/modules/weather"
 	"github.com/inestrivino/bonjour/internal/ui"
 )
 
@@ -53,4 +54,5 @@ func main() {
 
 	// Render the active modules
 	fmt.Println(quotes.RenderQuote(theme))
+	fmt.Println(weather.RenderWeatherData(cfg.User.Latitude, cfg.User.Longitude, cfg.User.City, theme))
 }

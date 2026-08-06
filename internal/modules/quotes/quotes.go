@@ -158,7 +158,7 @@ func RenderQuote(theme *ui.Theme) string {
 	q, err := GetDailyQuote()
 	if err != nil {
 		content := fmt.Sprintf("%s\n\n%s",
-			theme.ErrorText.Render("⚠️ Quote Unavailable"),
+			theme.ErrorText.Render("Quote Unavailable"),
 			theme.Subtitle.Render(err.Error()),
 		)
 		return theme.Card.BorderForeground(theme.Muted).Render(content)

@@ -23,6 +23,7 @@ type UserConfig struct {
 	Name      string  `json:"name"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+	City      string  `json:"city"`
 }
 
 // A DashboardConfig is the user's preferences regarding the dashboard
@@ -156,6 +157,7 @@ func initialWizard() (*Config, error) {
 					// Save matched results directly into config
 					cfg.User.Latitude = loc.Latitude
 					cfg.User.Longitude = loc.Longitude
+					cfg.User.City = inputCity
 
 					return nil
 				}),
