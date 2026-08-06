@@ -19,7 +19,6 @@ func TestSaveAndLoadConfig(t *testing.T) {
 		User: UserConfig{
 			Name:     "TestUser",
 			Location: "Madrid",
-			Language: "es",
 		},
 		Dashboard: DashboardConfig{
 			ShowWeather: true,

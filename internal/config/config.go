@@ -16,11 +16,10 @@ import (
 )
 
 // A UserConfig is the user's preferences regarding themselves
-// Preferred name, preferred location and preferred language for the app to use
+// Preferred name, preferred location
 type UserConfig struct {
 	Name     string `json:"name"`
 	Location string `json:"location"`
-	Language string `json:"language"`
 }
 
 // A DashboardConfig is the user's preferences regarding the dashboard
@@ -119,15 +118,6 @@ func initialWizard() (*Config, error) {
 				Description("Optional. Leaving this blank disables weather features").
 				Placeholder("London, UK").
 				Value(&cfg.User.Location),
-
-			huh.NewSelect[string]().
-				Title("Select your preferred language:").
-				Options(
-					huh.NewOption("English", "en"),
-					huh.NewOption("Español", "es"),
-					huh.NewOption("Français", "fr"),
-				).
-				Value(&cfg.User.Language),
 
 			// DashboardConfig
 			huh.NewMultiSelect[string]().
