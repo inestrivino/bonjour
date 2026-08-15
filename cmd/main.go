@@ -86,21 +86,24 @@ func runApplication(opts CLIOptions) error {
 	theme := ui.NewTheme(cfg.Dashboard.Theme)
 
 	// Render the banner
-	fmt.Println(theme.Banner.Render(asciiTitle))
+	if !opts.Mini {
+		fmt.Println(theme.Banner.Render(asciiTitle))
+	}
 
 	// Render greeting
 	greeting(cfg, theme)
 
 	// Render the active modules
 	showQuotes, showWeather, showEvents := determineModulesToShow(opts, cfg)
+	miniRender := opts.Mini
 	if showQuotes {
-		fmt.Println(quotes.RenderQuote(theme))
+		fmt.Println(quotes.RenderQuote(theme, miniRender))
 	}
 	if showWeather {
-		fmt.Println(weather.RenderWeatherData(cfg.User.Latitude, cfg.User.Longitude, cfg.User.City, theme))
+		fmt.Println(weather.RenderWeatherData(cfg.User.Latitude, cfg.User.Longitude, cfg.User.City, theme, miniRender))
 	}
 	if showEvents {
-		fmt.Println(events.RenderEvents(theme))
+		fmt.Println(events.RenderEvents(theme, miniRender))
 	}
 
 	return nil

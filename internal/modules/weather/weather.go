@@ -116,14 +116,27 @@ func getASCIIArt(w *WeatherResult) string {
 }
 
 // RenderWeatherData takes in the latitude and longitude, as well as a theme object, calls the fetch function and uses the theme information to render the result accordingly
-func RenderWeatherData(lat, lon float64, city string, theme *ui.Theme) string {
+func RenderWeatherData(lat, lon float64, city string, theme *ui.Theme, miniRender bool) string {
 	data, err := fetchWeatherData(lat, lon)
 	if err != nil {
+		if miniRender {
+			return theme.ErrorText.Render(fmt.Sprintf("Weather: %s", err.Error()))
+		}
 		content := fmt.Sprintf("%s\n\n%s",
 			theme.ErrorText.Render("Weather Unavailable"),
 			theme.Subtitle.Render(err.Error()),
 		)
 		return theme.Card.BorderForeground(theme.Muted).Render(content)
+	}
+
+	if miniRender {
+		// Single-line compact view showing essential temperature and location
+		return fmt.Sprintf("%s: %.1f°C (H: %.1f°C / L: %.1f°C)",
+			theme.Title.Render(city),
+			data.CurrentTemp,
+			data.MaxTemp,
+			data.MinTemp,
+		)
 	}
 
 	asciiArt := getASCIIArt(data)
@@ -132,7 +145,7 @@ func RenderWeatherData(lat, lon float64, city string, theme *ui.Theme) string {
 	// Header with current date
 	header := theme.Title.Render(fmt.Sprintf("%s in %s", todayDate, city))
 
-	// Ascii art
+	// ASCII art
 	artBlock := theme.Banner.Foreground(theme.Secondary).Render(asciiArt)
 
 	// Weather stats

@@ -153,15 +153,26 @@ func GetDailyQuote() (*Quote, error) {
 	return &cache.Current, nil
 }
 
-// RenderQuote takes in the app's theme and render's the quote based on that. It returns the string text to be printed
-func RenderQuote(theme *ui.Theme) string {
+// RenderQuote takes in the app's theme and renders the quote based on that. It returns the string text to be printed.
+func RenderQuote(theme *ui.Theme, miniRender bool) string {
 	q, err := GetDailyQuote()
 	if err != nil {
+		if miniRender {
+			return theme.ErrorText.Render("Quote Unavailable")
+		}
 		content := fmt.Sprintf("%s\n\n%s",
 			theme.ErrorText.Render("Quote Unavailable"),
 			theme.Subtitle.Render(err.Error()),
 		)
 		return theme.Card.BorderForeground(theme.Muted).Render(content)
+	}
+
+	if miniRender {
+		// Single-line compact view
+		return fmt.Sprintf("%s %s",
+			theme.Body.Italic(true).Render(fmt.Sprintf("“%s”", q.Text)),
+			theme.Subtitle.Render(fmt.Sprintf("— %s", q.Author)),
+		)
 	}
 
 	content := fmt.Sprintf("%s\n\n%s",

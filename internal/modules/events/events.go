@@ -200,7 +200,7 @@ func daysLeft(event *config.EventConfig) (int, error) {
 }
 
 // RenderEvents displays up to the 5 closest upcoming events on the chosen theme.
-func RenderEvents(theme *ui.Theme) string {
+func RenderEvents(theme *ui.Theme, miniRender bool) string {
 	configPath, err := config.GetConfigPath()
 	if err != nil {
 		return renderErrorCard(theme, "Events Unavailable", err.Error())
@@ -212,6 +212,9 @@ func RenderEvents(theme *ui.Theme) string {
 	}
 
 	if len(fullConfig.Events) == 0 {
+		if miniRender {
+			return theme.Subtitle.Render("No events scheduled")
+		}
 		emptyContent := theme.Subtitle.Render("No upcoming events scheduled.")
 		return theme.Card.Render(
 			lipgloss.JoinVertical(lipgloss.Left, theme.Title.Render("Events"), "", emptyContent),
@@ -228,46 +231,58 @@ func RenderEvents(theme *ui.Theme) string {
 
 	var upcoming []eventItem
 	for _, evt := range fullConfig.Events {
-		// Skip events whose warning window hasn't started yet
 		if evt.WarningStart != "" && evt.WarningStart > todayStr {
 			continue
 		}
 
 		days, err := daysLeft(&evt)
 		if err != nil {
-			continue // Skip improperly formatted dates
+			continue
 		}
 
-		// Filter out past events
 		if days >= 0 {
 			upcoming = append(upcoming, eventItem{event: evt, days: days})
 		}
 	}
 
 	if len(upcoming) == 0 {
+		if miniRender {
+			return theme.Subtitle.Render("No active events today")
+		}
 		emptyContent := theme.Subtitle.Render("No active event reminders for today.")
 		return theme.Card.Render(
 			lipgloss.JoinVertical(lipgloss.Left, theme.Title.Render("Events"), "", emptyContent),
 		)
 	}
 
-	// Sort upcoming events from closest to farthest
 	sort.Slice(upcoming, func(i, j int) bool {
 		return upcoming[i].days < upcoming[j].days
 	})
 
-	// Take up to top 5
+	if miniRender {
+		// Compact view with less events
+		item := upcoming[0]
+		daysText := fmt.Sprintf("%dd left", item.days)
+		if item.days == 0 {
+			daysText = "Today!"
+		}
+		return fmt.Sprintf("%s: %s",
+			theme.Title.Render(item.event.Title),
+			theme.Body.Render(daysText),
+		)
+	}
+
+	// Standard view (top 5 events in full card)
 	if len(upcoming) > 5 {
 		upcoming = upcoming[:5]
 	}
 
-	// Format each row: Title (Date) -> Days remaining
 	var rows []string
 	for _, item := range upcoming {
 		var daysText string
 		switch item.days {
 		case 0:
-			daysText = theme.ErrorText.Render("Today!") // Highlight if happening today
+			daysText = theme.ErrorText.Render("Today!")
 		case 1:
 			daysText = theme.Subtitle.Render("1 day left")
 		default:
@@ -277,13 +292,11 @@ func RenderEvents(theme *ui.Theme) string {
 		titleText := theme.Body.Render(item.event.Title)
 		dateText := lipgloss.NewStyle().Foreground(theme.Muted).Render(fmt.Sprintf("(%s)", item.event.Date))
 
-		// Combine row with space-between layout or left alignment
 		leftSide := fmt.Sprintf("%s %s", titleText, dateText)
 		row := lipgloss.JoinHorizontal(lipgloss.Center, leftSide, "  —  ", daysText)
 		rows = append(rows, row)
 	}
 
-	// Combine header and list into vertical card layout
 	header := theme.Title.Render("Upcoming Events")
 	body := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	content := lipgloss.JoinVertical(lipgloss.Left, header, "", body)
