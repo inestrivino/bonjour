@@ -14,7 +14,7 @@ import (
 	"github.com/inestrivino/bonjour/internal/ui"
 )
 
-const (
+var (
 	quoteAPIURL = "https://zenquotes.io/api/quotes"
 )
 

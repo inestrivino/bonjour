@@ -29,6 +29,8 @@ type geocodingResponse struct {
 	Results []LocationResult `json:"results"`
 }
 
+var geocodingBaseURL = "https://geocoding-api.open-meteo.com/v1/search"
+
 // ResolveLocation receives the city name, countryInput, admin1 and returns a LocationResult object
 func ResolveLocation(city, countryInput, admin1 string) (*LocationResult, error) {
 	city = strings.TrimSpace(city)
@@ -50,7 +52,7 @@ func ResolveLocation(city, countryInput, admin1 string) (*LocationResult, error)
 	}
 
 	//the endpoint is defined based on the params
-	endpoint := fmt.Sprintf("https://geocoding-api.open-meteo.com/v1/search?%s", params.Encode())
+	endpoint := fmt.Sprintf("%s?%s", geocodingBaseURL, params.Encode())
 
 	//we set a 10 second timeout
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -107,18 +109,7 @@ func NormalizeCountryCode(input string) string {
 		return ""
 	}
 
-	// If we receive a 2 letter code, then we return it in upper case
-	if len(input) == 2 {
-		return strings.ToUpper(input)
-	}
-
-	// We use Go's language tag parser to try to find the country code from the name
-	tag, err := language.ParseRegion(input)
-	if err == nil {
-		return tag.String()
-	}
-
-	// If the tag came back empty then we try to parse common names to their corresponding codes
+	// Check known aliases and common names first (handles non-standard 2-letter codes like "uk")
 	commonMap := map[string]string{
 		"spain":          "ES",
 		"españa":         "ES",
@@ -136,6 +127,17 @@ func NormalizeCountryCode(input string) string {
 
 	if code, ok := commonMap[input]; ok {
 		return code
+	}
+
+	// If it's any other 2-letter code, return it in upper case
+	if len(input) == 2 {
+		return strings.ToUpper(input)
+	}
+
+	// Try Go's language tag parser for standard full names
+	tag, err := language.ParseRegion(input)
+	if err == nil {
+		return tag.String()
 	}
 
 	return ""

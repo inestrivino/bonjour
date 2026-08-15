@@ -40,11 +40,13 @@ type WeatherResult struct {
 	CloudCover  int
 }
 
+var weatherBaseURL = "https://api.open-meteo.com/v1/forecast"
+
 // FetchWeatherData takes in a latitude and longitude to perform an API call. It returns a WeatherResult type object and may return an error
 func fetchWeatherData(lat, lon float64) (*WeatherResult, error) {
 	weatherAPIURL := fmt.Sprintf(
-		"https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=temperature_2m,precipitation_probability,cloud_cover,is_day&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto",
-		lat, lon,
+		"%s?latitude=%.4f&longitude=%.4f&current=temperature_2m,precipitation_probability,cloud_cover,is_day&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto",
+		weatherBaseURL, lat, lon,
 	)
 
 	client := &http.Client{Timeout: 5 * time.Second}
