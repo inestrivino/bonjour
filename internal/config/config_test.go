@@ -24,7 +24,7 @@ func TestSaveAndLoadConfig(t *testing.T) {
 		Dashboard: DashboardConfig{
 			ShowWeather: true,
 			ShowQuotes:  false,
-			ShowRSS:     true,
+			ShowEvents:  true,
 		},
 	}
 

@@ -172,7 +172,7 @@ func determineModulesToShow(opts CLIOptions, cfg *config.Config) (bool, bool, bo
 	// Whether to show weather module or not
 	if opts.NoWeather {
 		showWeather = false
-	} else {
+	} else if !(cfg.User.Latitude == 0 && cfg.User.Longitude == 0) {
 		showWeather = cfg.Dashboard.ShowWeather
 	}
 

@@ -125,6 +125,7 @@ func newEvent(currentTheme *ui.Theme) error {
 		return fmt.Errorf("failed to save event: %w", err)
 	}
 
+	fmt.Println("successfully created the event!")
 	return nil
 }
 
@@ -141,7 +142,7 @@ func deleteEvent(currentTheme *ui.Theme) error {
 	}
 
 	if len(fullConfig.Events) == 0 {
-		fmt.Println("No events found to delete.")
+		fmt.Println("no events found to delete.")
 		return nil
 	}
 
@@ -174,6 +175,7 @@ func deleteEvent(currentTheme *ui.Theme) error {
 		return fmt.Errorf("error saving config after deletion: %w", err)
 	}
 
+	fmt.Println("successfully deleted the event!")
 	return nil
 }
 

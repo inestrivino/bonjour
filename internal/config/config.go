@@ -28,13 +28,12 @@ type UserConfig struct {
 }
 
 // A DashboardConfig is the user's preferences regarding the dashboard.
-// Show certain modules (such as weather, quotes, rss...) or not.
+// Show certain modules (such as weather, quotes...) or not.
 type DashboardConfig struct {
 	Theme       string `json:"theme"`
 	ShowWeather bool   `json:"show_weather"`
 	ShowQuotes  bool   `json:"show_quotes"`
-	ShowRSS     bool   `json:"show_rss"`
-	ShowEvents  bool   `json:"show_events`
+	ShowEvents  bool   `json:"show_events"`
 }
 
 // An EventConfig is an event that the user wants to be reminded of.
@@ -46,11 +45,10 @@ type EventConfig struct {
 }
 
 // A Config is the entire user configuration of the app.
-// It includes the UserConfig, DashboardConfig, EventConfig, and a list of RSSFeeds from which to receive information.
+// It includes the UserConfig, DashboardConfig, EventConfig from which to receive information.
 type Config struct {
 	User      UserConfig      `json:"user"`
 	Dashboard DashboardConfig `json:"dashboard"`
-	RSSFeeds  []string        `json:"rss_feeds"`
 	Events    []EventConfig   `json:"events"`
 }
 
@@ -133,7 +131,7 @@ func initialWizard() (*Config, error) {
 	// We create a new Config object (values initialized to 0) and return the pointer to it
 	// We use a pointer here to avoid dealing with passing copies back and forth
 	cfg := &Config{}
-	selectedModules := []string{"weather", "quotes", "rss", "events"}
+	selectedModules := []string{"weather", "quotes", "events"}
 
 	// We initialize the charm theme as default for the initial wizard
 	initialTheme := ui.NewTheme("charm")
@@ -206,7 +204,6 @@ func initialWizard() (*Config, error) {
 					huh.NewOption("Weather", "weather"),
 					huh.NewOption("Quotes", "quotes"),
 					huh.NewOption("Events", "events"),
-					huh.NewOption("News and RSS", "rss"),
 				).
 				Value(&selectedModules),
 
@@ -235,16 +232,13 @@ func initialWizard() (*Config, error) {
 			cfg.Dashboard.ShowWeather = true
 		case "quotes":
 			cfg.Dashboard.ShowQuotes = true
-		case "rss":
-			cfg.Dashboard.ShowRSS = true
 		case "events":
 			cfg.Dashboard.ShowEvents = true
 		}
 	}
 
-	// We initialize the list of events and the list of rss feeds as empty lists.
+	// We initialize the list of events as an empty list.
 	cfg.Events = make([]EventConfig, 0)
-	cfg.RSSFeeds = make([]string, 0)
 
 	return cfg, nil
 }
@@ -305,19 +299,55 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 		}
 
 	case "location":
+		var inputCity, inputCountry, inputAdmin string
 		locationForm := huh.NewForm(
 			huh.NewGroup(
 				huh.NewInput().
-					Title("City").
-					Placeholder(config.User.City).
-					Value(&config.User.City),
+					Title("City Name").
+					Description("Optional. Leave blank to disable weather features.").
+					Placeholder("Paris").
+					Value(&inputCity),
+
+				huh.NewInput().
+					Title("Country").
+					Description("Optional (e.g., Spain, France, UK, ES)").
+					Placeholder("France").
+					Value(&inputCountry),
+
+				huh.NewInput().
+					Title("Administrative Area").
+					Description("Optional (e.g., Texas, Île-de-France, Catalunya)").
+					Placeholder("Île-de-France").
+					Value(&inputAdmin).
+					Validate(func(_ string) error {
+						cleanCity := strings.TrimSpace(inputCity)
+
+						// If city is empty, clear out the location data in config
+						if cleanCity == "" {
+							config.User.Latitude = 0
+							config.User.Longitude = 0
+							config.User.City = ""
+							return nil
+						}
+
+						loc, err := weather.ResolveLocation(cleanCity, inputCountry, inputAdmin)
+						if err != nil {
+							return err // Returns error allowing user to adjust inputs
+						}
+
+						// Save matched results directly into config
+						config.User.Latitude = loc.Latitude
+						config.User.Longitude = loc.Longitude
+						config.User.City = cleanCity
+
+						return nil
+					}),
 			),
 		).WithTheme(currentTheme.HuhTheme)
 
 		if err := locationForm.Run(); err != nil {
 			return err
 		}
-
 	case "dashboard":
 		var selectedModules []string
 		if config.Dashboard.ShowWeather {
@@ -325,9 +355,6 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 		}
 		if config.Dashboard.ShowQuotes {
 			selectedModules = append(selectedModules, "quotes")
-		}
-		if config.Dashboard.ShowRSS {
-			selectedModules = append(selectedModules, "rss")
 		}
 		if config.Dashboard.ShowEvents {
 			selectedModules = append(selectedModules, "events")
@@ -342,7 +369,6 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 						huh.NewOption("Weather", "weather"),
 						huh.NewOption("Quotes", "quotes"),
 						huh.NewOption("Events", "events"),
-						huh.NewOption("News and RSS", "rss"),
 					).
 					Value(&selectedModules),
 
@@ -365,7 +391,6 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 		// Reset booleans before applying the updated selection state
 		config.Dashboard.ShowWeather = false
 		config.Dashboard.ShowQuotes = false
-		config.Dashboard.ShowRSS = false
 		config.Dashboard.ShowEvents = false
 
 		for _, mod := range selectedModules {
@@ -376,8 +401,6 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 				config.Dashboard.ShowQuotes = true
 			case "events":
 				config.Dashboard.ShowEvents = true
-			case "rss":
-				config.Dashboard.ShowRSS = true
 			}
 		}
 
@@ -389,6 +412,8 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 	if err := SaveConfig(configPath, config); err != nil {
 		return fmt.Errorf("error saving configuration: %w", err)
 	}
+
+	fmt.Println("successfully updated the configuration!")
 
 	return nil
 }
