@@ -34,6 +34,7 @@ type DashboardConfig struct {
 	ShowWeather bool   `json:"show_weather"`
 	ShowQuotes  bool   `json:"show_quotes"`
 	ShowRSS     bool   `json:"show_rss"`
+	ShowEvents  bool   `json:"show_events`
 }
 
 // An EventConfig is an event that the user wants to be reminded of.
@@ -132,7 +133,7 @@ func initialWizard() (*Config, error) {
 	// We create a new Config object (values initialized to 0) and return the pointer to it
 	// We use a pointer here to avoid dealing with passing copies back and forth
 	cfg := &Config{}
-	selectedModules := []string{"weather", "quotes", "rss"}
+	selectedModules := []string{"weather", "quotes", "rss", "events"}
 
 	// We initialize the charm theme as default for the initial wizard
 	initialTheme := ui.NewTheme("charm")
@@ -204,6 +205,7 @@ func initialWizard() (*Config, error) {
 				Options(
 					huh.NewOption("Weather", "weather"),
 					huh.NewOption("Quotes", "quotes"),
+					huh.NewOption("Events", "events"),
 					huh.NewOption("News and RSS", "rss"),
 				).
 				Value(&selectedModules),
@@ -235,6 +237,8 @@ func initialWizard() (*Config, error) {
 			cfg.Dashboard.ShowQuotes = true
 		case "rss":
 			cfg.Dashboard.ShowRSS = true
+		case "events":
+			cfg.Dashboard.ShowEvents = true
 		}
 	}
 
@@ -325,6 +329,9 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 		if config.Dashboard.ShowRSS {
 			selectedModules = append(selectedModules, "rss")
 		}
+		if config.Dashboard.ShowEvents {
+			selectedModules = append(selectedModules, "events")
+		}
 
 		dashboardForm := huh.NewForm(
 			huh.NewGroup(
@@ -334,6 +341,7 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 					Options(
 						huh.NewOption("Weather", "weather"),
 						huh.NewOption("Quotes", "quotes"),
+						huh.NewOption("Events", "events"),
 						huh.NewOption("News and RSS", "rss"),
 					).
 					Value(&selectedModules),
@@ -358,6 +366,7 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 		config.Dashboard.ShowWeather = false
 		config.Dashboard.ShowQuotes = false
 		config.Dashboard.ShowRSS = false
+		config.Dashboard.ShowEvents = false
 
 		for _, mod := range selectedModules {
 			switch mod {
@@ -365,6 +374,8 @@ func ConfigWizard(currentTheme *ui.Theme) error {
 				config.Dashboard.ShowWeather = true
 			case "quotes":
 				config.Dashboard.ShowQuotes = true
+			case "events":
+				config.Dashboard.ShowEvents = true
 			case "rss":
 				config.Dashboard.ShowRSS = true
 			}
