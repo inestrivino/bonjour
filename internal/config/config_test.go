@@ -29,7 +29,7 @@ func TestSaveAndLoadConfig(t *testing.T) {
 	}
 
 	// TEST: saveConfig
-	if err := saveConfig(configPath, originalCfg); err != nil {
+	if err := SaveConfig(configPath, originalCfg); err != nil {
 		t.Fatalf("SaveConfig failed: %v", err)
 	}
 
@@ -39,7 +39,7 @@ func TestSaveAndLoadConfig(t *testing.T) {
 	}
 
 	// TEST: loadConfig
-	loadedCfg, err := loadConfig(configPath)
+	loadedCfg, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("loadConfig failed: %v", err)
 	}

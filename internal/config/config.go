@@ -2,7 +2,7 @@ package config
 
 // Package config implements the functionalities to help the user set the preferences in the application's configuration.
 //
-// This includes a wizard that helps users with the initial setup upon installation, methods to save and retrieve the configuration, etc.
+// This includes a wizard that helps users with the initial setup upon installation, and change it.
 
 import (
 	"encoding/json"
@@ -13,12 +13,13 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
+
 	"github.com/inestrivino/bonjour/internal/modules/weather"
 	"github.com/inestrivino/bonjour/internal/ui"
 )
 
-// A UserConfig is the user's preferences regarding themselves
-// Preferred name, preferred location
+// A UserConfig is the user's preferences regarding themselves.
+// Preferred name, preferred location.
 type UserConfig struct {
 	Name      string  `json:"name"`
 	Latitude  float64 `json:"latitude"`
@@ -26,8 +27,8 @@ type UserConfig struct {
 	City      string  `json:"city"`
 }
 
-// A DashboardConfig is the user's preferences regarding the dashboard
-// Show certain modules (such as weather, quotes, rss...) or not
+// A DashboardConfig is the user's preferences regarding the dashboard.
+// Show certain modules (such as weather, quotes, rss...) or not.
 type DashboardConfig struct {
 	Theme       string `json:"theme"`
 	ShowWeather bool   `json:"show_weather"`
@@ -35,16 +36,16 @@ type DashboardConfig struct {
 	ShowRSS     bool   `json:"show_rss"`
 }
 
-// An EventConfig is an event that the user wants to be reminded of
-// The date the event happens, the title of the event, and from which date forward they want to be warned of it
+// An EventConfig is an event that the user wants to be reminded of.
+// The date the event happens, the title of the event, and from which date forward they want to be warned of it.
 type EventConfig struct {
 	Date         string `json:"date"`
 	Title        string `json:"title"`
 	WarningStart string `json:"warningstart"`
 }
 
-// A Config is the entire user configuration of the app
-// It includes the UserConfig, DashboardConfig, EventConfig, and a list of RSSFeeds from which to receive information
+// A Config is the entire user configuration of the app.
+// It includes the UserConfig, DashboardConfig, EventConfig, and a list of RSSFeeds from which to receive information.
 type Config struct {
 	User      UserConfig      `json:"user"`
 	Dashboard DashboardConfig `json:"dashboard"`
@@ -53,7 +54,7 @@ type Config struct {
 }
 
 // GetConfigPath returns a string with the path where the Config is stored. It may also return an error.
-func getConfigPath() (string, error) {
+func GetConfigPath() (string, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -62,12 +63,45 @@ func getConfigPath() (string, error) {
 	return appCOnfigDir, nil
 }
 
-// LoadOrRunWizard checks whether there is a configuration file or not. If there is not, it launches the configuration wizard for first-time users.
-// It returns a Config type object
-func LoadOrRunWizard() (*Config, error) {
-	configPath, err := getConfigPath()
+// saveConfig saves the Config into a readable JSON file.
+// It returns an error.
+func SaveConfig(path string, cfg *Config) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	// Whitespace application to ensure JSON legibility
+	bytes, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("Error while trying to obtain the home directory: %w", err)
+		return err
+	}
+
+	return os.WriteFile(path, bytes, 0644)
+}
+
+// loadConfig reads the JSON config file.
+// It returns a Config object and an error.
+func LoadConfig(path string) (*Config, error) {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(bytes, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
+// LoadOrRunWizard checks whether there is a configuration file or not. If there is not, it launches the configuration wizard for first-time users.
+// It returns a Config type object.
+func LoadOrRunWizard() (*Config, error) {
+	configPath, err := GetConfigPath()
+	if err != nil {
+		return nil, fmt.Errorf("Error while trying to obtain the configuration directory: %w", err)
 	}
 
 	//we check whether the config file exists
@@ -80,7 +114,7 @@ func LoadOrRunWizard() (*Config, error) {
 		}
 
 		// We call the function to save the configuration. It may only return an error. If it does return an error then we make it known. Otherwise we assume success.
-		if err := saveConfig(configPath, cfg); err != nil {
+		if err := SaveConfig(configPath, cfg); err != nil {
 			return nil, fmt.Errorf("Error saving user configuration: %w", err)
 		}
 
@@ -89,11 +123,11 @@ func LoadOrRunWizard() (*Config, error) {
 		return cfg, nil
 	}
 
-	return loadConfig(configPath)
+	return LoadConfig(configPath)
 }
 
 // initialWizard presents a form of questions for the user to answer, which will be used in the Config.
-// It returns a Config object and an error
+// It returns a Config object and an error.
 func initialWizard() (*Config, error) {
 	// We create a new Config object (values initialized to 0) and return the pointer to it
 	// We use a pointer here to avoid dealing with passing copies back and forth
@@ -191,8 +225,8 @@ func initialWizard() (*Config, error) {
 		return nil, err
 	}
 
-	// Map selections to bool values
-	// For iteration over a range of selectedModules, for each one mod receives the string item ("weather") and sets the corresponding dashboard element to true
+	// Map selections to bool values.
+	// For iteration over a range of selectedModules, for each one mod receives the string item ("weather") and sets the corresponding dashboard element to true.
 	for _, mod := range selectedModules {
 		switch mod {
 		case "weather":
@@ -204,40 +238,146 @@ func initialWizard() (*Config, error) {
 		}
 	}
 
+	// We initialize the list of events and the list of rss feeds as empty lists.
+	cfg.Events = make([]EventConfig, 0)
+	cfg.RSSFeeds = make([]string, 0)
+
 	return cfg, nil
 }
 
-// saveConfig saves the Config into a readable JSON file
-// It returns an error
-func saveConfig(path string, cfg *Config) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+// ConfigWizard is a menu function to help the user alter their configuration.
+func ConfigWizard(currentTheme *ui.Theme) error {
+	configPath, err := GetConfigPath()
+	if err != nil {
+		return fmt.Errorf("could not resolve config path: %w", err)
+	}
+
+	// Load existing configuration
+	config, err := LoadConfig(configPath)
+	if err != nil {
+		return fmt.Errorf("Error while loading the previous configuration: %w", err)
+	}
+
+	// User selects which part of the config to edit
+	var confToEdit string
+	firstForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select one to edit:").
+				Options(
+					huh.NewOption("Change username", "username"),
+					huh.NewOption("Change or delete location", "location"),
+					huh.NewOption("Dashboard configuration", "dashboard"),
+					huh.NewOption("Go back", "back"),
+				).
+				Value(&confToEdit),
+		),
+	).WithTheme(currentTheme.HuhTheme)
+
+	if err := firstForm.Run(); err != nil {
 		return err
 	}
 
-	// Whitespace application to ensure JSON legibility
-	bytes, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return err
+	// Based on the user selection one form or the other is shown
+	switch confToEdit {
+	case "username":
+		userNameForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("What would you like to be called?").
+					Placeholder(config.User.Name).
+					Value(&config.User.Name).
+					Validate(func(str string) error {
+						if len(str) == 0 {
+							return errors.New("Name can't be empty")
+						}
+						return nil
+					}),
+			),
+		).WithTheme(currentTheme.HuhTheme)
+
+		if err := userNameForm.Run(); err != nil {
+			return err
+		}
+
+	case "location":
+		locationForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("City").
+					Placeholder(config.User.City).
+					Value(&config.User.City),
+			),
+		).WithTheme(currentTheme.HuhTheme)
+
+		if err := locationForm.Run(); err != nil {
+			return err
+		}
+
+	case "dashboard":
+		var selectedModules []string
+		if config.Dashboard.ShowWeather {
+			selectedModules = append(selectedModules, "weather")
+		}
+		if config.Dashboard.ShowQuotes {
+			selectedModules = append(selectedModules, "quotes")
+		}
+		if config.Dashboard.ShowRSS {
+			selectedModules = append(selectedModules, "rss")
+		}
+
+		dashboardForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewMultiSelect[string]().
+					Title("Select the dashboard modules you want to activate:").
+					Description("Use the [Space] key to toggle or untoggle modules").
+					Options(
+						huh.NewOption("Weather", "weather"),
+						huh.NewOption("Quotes", "quotes"),
+						huh.NewOption("News and RSS", "rss"),
+					).
+					Value(&selectedModules),
+
+				huh.NewSelect[string]().
+					Title("Select UI Theme:").
+					Options(
+						huh.NewOption("Charm (Default)", "charm"),
+						huh.NewOption("Dracula", "dracula"),
+						huh.NewOption("Catppuccin", "catppuccin"),
+						huh.NewOption("Base16", "base16"),
+					).
+					Value(&config.Dashboard.Theme),
+			),
+		).WithTheme(currentTheme.HuhTheme)
+
+		if err := dashboardForm.Run(); err != nil {
+			return err
+		}
+
+		// Reset booleans before applying the updated selection state
+		config.Dashboard.ShowWeather = false
+		config.Dashboard.ShowQuotes = false
+		config.Dashboard.ShowRSS = false
+
+		for _, mod := range selectedModules {
+			switch mod {
+			case "weather":
+				config.Dashboard.ShowWeather = true
+			case "quotes":
+				config.Dashboard.ShowQuotes = true
+			case "rss":
+				config.Dashboard.ShowRSS = true
+			}
+		}
+
+	case "back":
+		return nil
 	}
 
-	return os.WriteFile(path, bytes, 0644)
+	// Persist changes back to disk
+	if err := SaveConfig(configPath, config); err != nil {
+		return fmt.Errorf("error saving configuration: %w", err)
+	}
+
+	return nil
 }
-
-// loadConfig reads the JSON config file
-// It returns a Config object and an error
-func loadConfig(path string) (*Config, error) {
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg Config
-	if err := json.Unmarshal(bytes, &cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
-
-// TODO: CREATE SOME SORT OF WIZARD THAT ALLOWS THE USER TO ALTER THIS CONFIGS LATER ON
