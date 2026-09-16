@@ -27,3 +27,6 @@ go.work.sum
 # Editor/IDE
 # .idea/
 .vscode/
+
+# Personal TO DO file for project development
+TODO.md

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/inestrivino/bonjour/internal/config"
 	"github.com/inestrivino/bonjour/internal/ui"
@@ -25,157 +24,14 @@ func saveEvent(newEvent *config.EventConfig) error {
 		return fmt.Errorf("error loading configuration: %w", err)
 	}
 
-	// Append the new event to the existing events slice
 	if newEvent != nil {
 		fullConfig.Events = append(fullConfig.Events, *newEvent)
 	}
 
-	// Save the updated configuration back to disk
 	if err := config.SaveConfig(configPath, fullConfig); err != nil {
 		return fmt.Errorf("error saving updated configuration: %w", err)
 	}
 
-	return nil
-}
-
-// newEvent displays a form to the user from which it takes the data to create a new Event object, then saves it into the disk
-func newEvent(currentTheme *ui.Theme) error {
-	// Structure for the new event
-	var (
-		title        string
-		dateStr      string
-		warningStart string
-	)
-
-	// Form for user to fill and thus create the event.
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Event Title").
-				Placeholder("Mom's Birthday").
-				Value(&title).
-				Validate(func(str string) error {
-					if strings.TrimSpace(str) == "" {
-						return errors.New("title cannot be empty")
-					}
-					return nil
-				}),
-
-			huh.NewInput().
-				Title("Event Date").
-				Description("Format: YYYY-MM-DD").
-				Placeholder("2026-12-25").
-				Value(&dateStr).
-				Validate(func(str string) error {
-					_, err := time.Parse("2006-01-02", strings.TrimSpace(str))
-					if err != nil {
-						return errors.New("invalid date format; please use YYYY-MM-DD")
-					}
-					return nil
-				}),
-
-			huh.NewInput().
-				Title("Warning Start Date").
-				Description("From which date forward do you want to be reminded? (YYYY-MM-DD). Leave empty to start today.").
-				Placeholder("2026-12-18").
-				Value(&warningStart).
-				Validate(func(str string) error {
-					str = strings.TrimSpace(str)
-					var wTime time.Time
-					var err error
-					if str == "" {
-						// If str is empty, default warning time to today
-						todayStr := time.Now().Format("2006-01-02")
-						wTime, _ = time.Parse("2006-01-02", todayStr)
-					} else {
-						wTime, err = time.Parse("2006-01-02", str)
-						if err != nil {
-							return errors.New("invalid date format; please use YYYY-MM-DD")
-						}
-					}
-
-					if err != nil {
-						return errors.New("invalid date format; please use YYYY-MM-DD")
-					}
-
-					// Verify warning start isn't after the event date
-					if eTime, err := time.Parse("2006-01-02", strings.TrimSpace(dateStr)); err == nil {
-						if wTime.After(eTime) {
-							return errors.New("warning date cannot be after the event date")
-						}
-					}
-					return nil
-				}),
-		),
-	).WithTheme(currentTheme.HuhTheme)
-
-	if err := form.Run(); err != nil {
-		return err
-	}
-
-	// Turn the event variable into an EventConfig type
-	event := &config.EventConfig{
-		Title:        strings.TrimSpace(title),
-		Date:         strings.TrimSpace(dateStr),
-		WarningStart: strings.TrimSpace(warningStart),
-	}
-
-	// Now we save the EventConfig object
-	if err := saveEvent(event); err != nil {
-		return fmt.Errorf("failed to save event: %w", err)
-	}
-
-	fmt.Println("successfully created the event!")
-	return nil
-}
-
-// deleteEvent displays a form for the user to choose an event to delete from the config directory
-func deleteEvent(currentTheme *ui.Theme) error {
-	configPath, err := config.GetConfigPath()
-	if err != nil {
-		return fmt.Errorf("error obtaining config directory: %w", err)
-	}
-
-	fullConfig, err := config.LoadConfig(configPath)
-	if err != nil {
-		return fmt.Errorf("error loading configuration: %w", err)
-	}
-
-	if len(fullConfig.Events) == 0 {
-		fmt.Println("no events found to delete.")
-		return nil
-	}
-
-	// Build selectable options from existing events
-	var options []huh.Option[int]
-	for idx, evt := range fullConfig.Events {
-		label := fmt.Sprintf("%s (%s)", evt.Title, evt.Date)
-		options = append(options, huh.NewOption(label, idx))
-	}
-
-	var selectedIdx int
-
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[int]().
-				Title("Select an event to delete:").
-				Options(options...).
-				Value(&selectedIdx),
-		),
-	).WithTheme(currentTheme.HuhTheme)
-
-	if err := form.Run(); err != nil {
-		return err
-	}
-
-	// Remove chosen element from slice preserving order
-	fullConfig.Events = append(fullConfig.Events[:selectedIdx], fullConfig.Events[selectedIdx+1:]...)
-
-	if err := config.SaveConfig(configPath, fullConfig); err != nil {
-		return fmt.Errorf("error saving config after deletion: %w", err)
-	}
-
-	fmt.Println("successfully deleted the event!")
 	return nil
 }
 
@@ -190,11 +46,8 @@ func daysLeft(event *config.EventConfig) (int, error) {
 		return 0, err
 	}
 
-	// Normalize today to midnight in local time for clean day-difference calculation
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-
-	// Truncate event time to midnight as well
 	eventDate := time.Date(eventTime.Year(), eventTime.Month(), eventTime.Day(), 0, 0, 0, 0, now.Location())
 
 	days := int(eventDate.Sub(today).Hours() / 24)
@@ -262,7 +115,6 @@ func RenderEvents(theme *ui.Theme, miniRender bool) string {
 	})
 
 	if miniRender {
-		// Compact view with less events
 		item := upcoming[0]
 		daysText := fmt.Sprintf("%dd left", item.days)
 		if item.days == 0 {
@@ -274,7 +126,6 @@ func RenderEvents(theme *ui.Theme, miniRender bool) string {
 		)
 	}
 
-	// Standard view (top 5 events in full card)
 	if len(upcoming) > 5 {
 		upcoming = upcoming[:5]
 	}
@@ -306,7 +157,7 @@ func RenderEvents(theme *ui.Theme, miniRender bool) string {
 	return theme.Card.Render(content)
 }
 
-// Helper to format error states consistently with RenderQuote
+// Helper function to render errors in a uniform way
 func renderErrorCard(theme *ui.Theme, title string, detail string) string {
 	content := fmt.Sprintf("%s\n\n%s",
 		theme.ErrorText.Render(title),
@@ -315,40 +166,61 @@ func renderErrorCard(theme *ui.Theme, title string, detail string) string {
 	return theme.Card.BorderForeground(theme.Muted).Render(content)
 }
 
-// EventsWizard is the menu function for managing events.
-func EventsWizard(currentTheme *ui.Theme) error {
-	var action string
+// ValidateEventTitle ensures that the event's title is not empty or invalid
+func ValidateEventTitle(str string) error {
+	if strings.TrimSpace(str) == "" {
+		return errors.New("title cannot be empty")
+	}
+	return nil
+}
 
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Event Management").
-				Description("Choose an action to manage your events:").
-				Options(
-					huh.NewOption("Add a new event", "add"),
-					huh.NewOption("Delete an existing event", "delete"),
-					huh.NewOption("Go Back", "back"),
-				).
-				Value(&action),
-		),
-	).WithTheme(currentTheme.HuhTheme)
+// ValidateEventDate ensures that the event's date is correctly formatted
+func ValidateEventDate(str string) error {
+	_, err := time.Parse("2006-01-02", strings.TrimSpace(str))
+	if err != nil {
+		return errors.New("invalid date format; please use YYYY-MM-DD")
+	}
+	return nil
+}
 
-	if err := form.Run(); err != nil {
-		return err
+// ValidateWarningDate ensures the date established as start of warning is valid
+func ValidateWarningDate(warningStr, eventDateStr string, now time.Time) error {
+	warningStr = strings.TrimSpace(warningStr)
+	var wTime time.Time
+	var err error
+
+	if warningStr == "" {
+		todayStr := now.Format("2006-01-02")
+		wTime, _ = time.Parse("2006-01-02", todayStr)
+	} else {
+		wTime, err = time.Parse("2006-01-02", warningStr)
+		if err != nil {
+			return errors.New("invalid date format; please use YYYY-MM-DD")
+		}
 	}
 
-	switch action {
-	case "add":
-		if err := newEvent(currentTheme); err != nil {
-			return fmt.Errorf("error creating new event: %w", err)
+	if eTime, err := time.Parse("2006-01-02", strings.TrimSpace(eventDateStr)); err == nil {
+		if wTime.After(eTime) {
+			return errors.New("warning date cannot be after the event date")
 		}
-	case "delete":
-		if err := deleteEvent(currentTheme); err != nil {
-			return fmt.Errorf("error deleting event: %w", err)
-		}
-	case "back":
-		return nil
 	}
+	return nil
+}
 
+// CreateEventObject returns a new Event object
+func CreateEventObject(title, dateStr, warningStart string) *config.EventConfig {
+	return &config.EventConfig{
+		Title:        strings.TrimSpace(title),
+		Date:         strings.TrimSpace(dateStr),
+		WarningStart: strings.TrimSpace(warningStart),
+	}
+}
+
+// DeleteEventAtIndex handles the deletion of an Event object from the main Config object
+func DeleteEventAtIndex(fullConfig *config.Config, index int) error {
+	if index < 0 || index >= len(fullConfig.Events) {
+		return errors.New("event index out of bounds")
+	}
+	fullConfig.Events = append(fullConfig.Events[:index], fullConfig.Events[index+1:]...)
 	return nil
 }

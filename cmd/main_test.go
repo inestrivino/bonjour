@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/inestrivino/bonjour/internal/config"
 	"github.com/inestrivino/bonjour/internal/ui"
@@ -75,7 +74,7 @@ func captureStdout(f func()) string {
 	return buf.String()
 }
 
-// Test Module Visibility Logic (All Branch Combinations)
+// Test module visibility logic
 func TestDetermineModulesToShow(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -168,38 +167,40 @@ func TestDetermineModulesToShow(t *testing.T) {
 	}
 }
 
-// Test Greeting output formatting across time slots
+// Test greeting output formatting across time slots
 func TestGreeting(t *testing.T) {
 	testTheme := ui.NewTheme("charm")
 	testCfg := &config.Config{
-		User: config.UserConfig{Name: "Alice"},
+		User: config.UserConfig{Name: "TestUser"},
 	}
 
-	output := captureStdout(func() {
-		greeting(testCfg, testTheme)
-	})
-
-	if !strings.Contains(output, "Alice") {
-		t.Errorf("expected greeting output to contain 'Alice', got: %s", output)
+	tests := []struct {
+		name     string
+		hour     int
+		expected string
+	}{
+		{"Morning greeting", 9, "morning"},
+		{"Afternoon greeting", 14, "afternoon"},
+		{"Evening greeting", 20, "evening"},
 	}
 
-	hour := time.Now().Hour()
-	if hour >= 12 && hour < 18 {
-		if !strings.Contains(output, "afternoon") {
-			t.Errorf("expected 'afternoon' in greeting for hour %d, got: %s", hour, output)
-		}
-	} else if hour >= 18 {
-		if !strings.Contains(output, "evening") {
-			t.Errorf("expected 'evening' in greeting for hour %d, got: %s", hour, output)
-		}
-	} else {
-		if !strings.Contains(output, "morning") {
-			t.Errorf("expected 'morning' in greeting for hour %d, got: %s", hour, output)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := captureStdout(func() {
+				greeting(testCfg, testTheme, tt.hour)
+			})
+
+			if !strings.Contains(output, tt.expected) {
+				t.Errorf("expected greeting to contain %q for hour %d, got: %s", tt.expected, tt.hour, output)
+			}
+			if !strings.Contains(output, "TestUser") {
+				t.Errorf("expected greeting to contain 'TestUser', got: %s", output)
+			}
+		})
 	}
 }
 
-// Test Cobra Command Definitions and Structure
+// Test cobra command definitions and structure
 func TestCobraCommandSetup(t *testing.T) {
 	if rootCmd.Use != "bonjour" {
 		t.Errorf("expected rootCmd.Use to be 'bonjour', got %s", rootCmd.Use)
@@ -223,7 +224,7 @@ func TestCobraCommandSetup(t *testing.T) {
 	}
 }
 
-// Test Flags Setup
+// Test flags setup
 func TestCLIFlags(t *testing.T) {
 	flags := []string{"noweather", "noquotes", "noevents", "mini"}
 
@@ -235,7 +236,7 @@ func TestCLIFlags(t *testing.T) {
 	}
 }
 
-// Test Application Execution Pipeline in Mini Mode
+// Test application execution pipeline in mini mode
 func TestRunApplication_MiniMode(t *testing.T) {
 	_ = setupTestConfig(t) // Seeds config file so wizard is bypassed
 
@@ -256,22 +257,67 @@ func TestRunApplication_MiniMode(t *testing.T) {
 	}
 }
 
-// Test Application Execution Pipeline in Full Mode
+// Test application execution pipeline in full mode
 func TestRunApplication_FullMode(t *testing.T) {
 	_ = setupTestConfig(t) // Seeds config file so wizard is bypassed
 
-	opts := CLIOptions{
-		Mini:      false,
-		NoWeather: true, // Off to avoid network calls during main test
-		NoQuotes:  true,
-		NoEvents:  true,
-	}
+	// Configure the root command's arguments to match basic options
+	rootCmd.SetArgs([]string{
+		"--noweather",
+		"--noquotes",
+		"--noevents",
+	})
 
-	output := captureStdout(func() {
-		_ = runApplication(opts)
+	var output string
+	output = captureStdout(func() {
+		err := rootCmd.Execute()
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
 	})
 
 	if !strings.Contains(output, "TestUser") {
 		t.Errorf("expected output to contain user name 'TestUser', got: %s", output)
+	}
+}
+
+// Test configuration execution pipeline
+func TestConfigCommand_Execution(t *testing.T) {
+	_ = setupTestConfig(t) //Seeds config file so wizard is bypassed
+
+	// Temporarily replace the wizard with a mock that does nothing and returns no error
+	oldWizard := runConfigWizard
+	runConfigWizard = func(theme *ui.Theme) error {
+		return nil
+	}
+	defer func() { runConfigWizard = oldWizard }() // Restore it after the test
+
+	// CLI arguments should point to the config command
+	rootCmd.SetArgs([]string{"config"})
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Errorf("expected no error from 'config' command execution, got %v", err)
+	}
+}
+
+// Test events configuration execution pipeline
+func TestEventsCommand_Execution(t *testing.T) {
+	_ = setupTestConfig(t) //Seeds config file so wizard is bypassed
+
+	// Temporarily replace the wizard with a mock that does nothing and returns no error
+	oldWizard := runEventsWizard
+	runEventsWizard = func(theme *ui.Theme) error {
+		return nil
+	}
+	defer func() { runEventsWizard = oldWizard }() // Restore it after the test
+
+	// CLI arguments should point to the events command
+	rootCmd.SetArgs([]string{"events"})
+
+	// Execute the command
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Errorf("expected no error from 'events' command execution, got %v", err)
 	}
 }

@@ -31,6 +31,7 @@ type LocalCache struct {
 	Pool     []Quote `json:"pool"`      // Offline backup pool
 }
 
+// getCachePath returns the file system path to the cache file for the application
 func getCachePath() (string, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -43,6 +44,7 @@ func getCachePath() (string, error) {
 	return filepath.Join(appCacheDir, "quotes_pool.json"), nil
 }
 
+// loadCache takes the information within the cache file into a LocalCache object
 func loadCache() (*LocalCache, error) {
 	cachePath, err := getCachePath()
 	if err != nil {
@@ -62,6 +64,7 @@ func loadCache() (*LocalCache, error) {
 	return &cache, nil
 }
 
+// saveCache moves the information from a LocalCache object into the main cache file
 func saveCache(cache *LocalCache) {
 	cachePath, err := getCachePath()
 	if err != nil {

@@ -36,17 +36,20 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:     "bonjour",
-	Short:   "bonjour is a terminal helper to start your day right.",
+	Short:   "bonjour is a terminal helper to start your day right",
 	Version: version,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runApplication(cliOpts)
 	},
 }
 
+// Allow mocking in tests to prevent /dev/tty errors or terminal getting stuck by the form
+var runConfigWizard = config.ConfigWizard
+
 // configCmd represents the 'bonjour config' subcommand
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Open the configuration wizard to edit your settings",
+	Short: "open the configuration wizard to edit your settings",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.LoadOrRunWizard()
 		if err != nil {
@@ -54,14 +57,17 @@ var configCmd = &cobra.Command{
 		}
 
 		theme := ui.NewTheme(cfg.Dashboard.Theme)
-		return config.ConfigWizard(theme)
+		return runConfigWizard(theme)
 	},
 }
+
+// Allow mocking in tests to prevent /dev/tty errors or terminal getting stuck by the form
+var runEventsWizard = events.EventsWizard
 
 // eventsCmd represents the 'bonjour events' subcommand
 var eventsCmd = &cobra.Command{
 	Use:   "events",
-	Short: "Open the events wizard to add or delete events",
+	Short: "open the events wizard to add or delete events",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.LoadOrRunWizard()
 		if err != nil {
@@ -69,17 +75,18 @@ var eventsCmd = &cobra.Command{
 		}
 
 		theme := ui.NewTheme(cfg.Dashboard.Theme)
-		return events.EventsWizard(theme)
+		return runEventsWizard(theme)
 	},
 }
 
 // Functions to run the app
 
+// Main execution logic
 func runApplication(opts CLIOptions) error {
 	// Load or create configuration
 	cfg, err := config.LoadOrRunWizard()
 	if err != nil {
-		log.Fatalf("Error running wizard: %v", err)
+		log.Fatalf("error running wizard: %v", err)
 	}
 
 	// Initialize the theme from the configuration
@@ -91,7 +98,7 @@ func runApplication(opts CLIOptions) error {
 	}
 
 	// Render greeting
-	greeting(cfg, theme)
+	greeting(cfg, theme, time.Now().Hour())
 
 	// Render the active modules
 	showQuotes, showWeather, showEvents := determineModulesToShow(opts, cfg)
@@ -109,6 +116,7 @@ func runApplication(opts CLIOptions) error {
 	return nil
 }
 
+// Cobra initialization for commands and flags
 func init() {
 	// Subcommands
 	rootCmd.AddCommand(configCmd)
@@ -123,6 +131,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&cliOpts.Mini, "mini", false, "execute as a compact view")
 }
 
+// Main execution loop (Main function)
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -144,19 +153,19 @@ const asciiTitle = `
                             \/___/`
 
 // greeting takes in a Config type object and a theme type object, from which it renders a greeting based on the user's name, time of day, and theme
-func greeting(cfg *config.Config, theme *ui.Theme) {
-	greeting := "morning"
-	hour := time.Now().Hour()
+func greeting(cfg *config.Config, theme *ui.Theme, hour int) {
+	greetingText := "morning"
 
 	if hour >= 12 && hour < 18 {
-		greeting = "afternoon"
+		greetingText = "afternoon"
 	} else if hour >= 18 {
-		greeting = "evening"
+		greetingText = "evening"
 	}
 
-	fmt.Println(theme.Subtitle.Render(fmt.Sprintf("Good %s, %s!\n", greeting, cfg.User.Name)))
+	fmt.Println(theme.Subtitle.Render(fmt.Sprintf("Good %s, %s!\n", greetingText, cfg.User.Name)))
 }
 
+// Helper function to determine, given flags and the user's configuration, which modules to execute and which not
 func determineModulesToShow(opts CLIOptions, cfg *config.Config) (bool, bool, bool) {
 	var showQuotes bool
 	var showWeather bool
