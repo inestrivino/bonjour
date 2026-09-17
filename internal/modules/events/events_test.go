@@ -12,6 +12,9 @@ import (
 	"github.com/inestrivino/bonjour/internal/ui"
 )
 
+// Mock terminal width for rendering test
+var globalWidth = 80
+
 // Helper function to set up a cross-platform, isolated environment
 func setupTestEnv(t *testing.T) string {
 	t.Helper()
@@ -214,7 +217,7 @@ func TestRenderEvents(t *testing.T) {
 	}
 
 	t.Run("Standard Rendering", func(t *testing.T) {
-		output := RenderEvents(theme, false)
+		output := RenderEvents(theme, false, globalWidth)
 
 		if !strings.Contains(output, "Upcoming Events") {
 			t.Error("expected output to contain 'Upcoming Events' header")
@@ -237,7 +240,7 @@ func TestRenderEvents(t *testing.T) {
 	})
 
 	t.Run("Mini Rendering", func(t *testing.T) {
-		output := RenderEvents(theme, true)
+		output := RenderEvents(theme, true, globalWidth)
 
 		// Mini rendering highlights the single nearest active event
 		if !strings.Contains(output, "Today Celebration") {
@@ -266,14 +269,14 @@ func TestRenderEvents_EmptyState(t *testing.T) {
 	}
 
 	t.Run("Standard View Empty", func(t *testing.T) {
-		out := RenderEvents(theme, false)
+		out := RenderEvents(theme, false, globalWidth)
 		if !strings.Contains(out, "No upcoming events scheduled.") {
 			t.Errorf("expected empty state standard message, got: %s", out)
 		}
 	})
 
 	t.Run("Mini View Empty", func(t *testing.T) {
-		out := RenderEvents(theme, true)
+		out := RenderEvents(theme, true, globalWidth)
 		if !strings.Contains(out, "No events scheduled") {
 			t.Errorf("expected empty state mini message, got: %s", out)
 		}
@@ -289,15 +292,15 @@ func TestRenderEvents_EmptyState(t *testing.T) {
 	_ = config.SaveConfig(configPath, cfgInactive)
 
 	t.Run("Standard View No Active Events", func(t *testing.T) {
-		out := RenderEvents(theme, false)
-		if !strings.Contains(out, "No active event reminders for today.") {
+		out := RenderEvents(theme, false, globalWidth)
+		if !strings.Contains(out, "No active event reminders for today") {
 			t.Errorf("expected no active reminders message, got: %s", out)
 		}
 	})
 
 	t.Run("Mini View No Active Events", func(t *testing.T) {
-		out := RenderEvents(theme, true)
-		if !strings.Contains(out, "No active events today") {
+		out := RenderEvents(theme, true, globalWidth)
+		if !strings.Contains(out, "No active event reminders for today") {
 			t.Errorf("expected no active events mini message, got: %s", out)
 		}
 	})
@@ -313,7 +316,7 @@ func TestRenderEvents_MissingConfigError(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("APPDATA", "")
 
-	out := RenderEvents(theme, false)
+	out := RenderEvents(theme, false, globalWidth)
 	if !strings.Contains(out, "Events Unavailable") {
 		t.Errorf("expected error card output 'Events Unavailable', got: %s", out)
 	}
@@ -324,7 +327,7 @@ func TestRenderEvents_MissingConfigError(t *testing.T) {
 	_ = os.MkdirAll(filepath.Dir(configPath), 0755)
 	_ = os.WriteFile(configPath, []byte("bad json"), 0644)
 
-	out = RenderEvents(theme, false)
+	out = RenderEvents(theme, false, globalWidth)
 	if !strings.Contains(out, "Events Unavailable") {
 		t.Errorf("expected error card output when config JSON is corrupted, got: %s", out)
 	}
@@ -359,7 +362,7 @@ func TestRenderEvents_TopFiveLimit(t *testing.T) {
 		t.Fatalf("failed to save config: %v", err)
 	}
 
-	out := RenderEvents(theme, false)
+	out := RenderEvents(theme, false, globalWidth)
 
 	// Ensure top 5 are displayed and 6th and 7th are truncated
 	if !strings.Contains(out, "Event 1") || !strings.Contains(out, "Event 5") {

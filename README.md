@@ -26,3 +26,4 @@
 
 If you run the script as `NO_COLOR=1 go run cmd/main.go` you will be able to display the result without color or style.
 Run `go run scripts/testCoverage.go` to receive a quality html report on code coverage (which lines are covered and which are not, etc).
+At this point the application does not make use of GoRoutines as it only does one HTTP call on every run, meaning there is not much of a need to optimize it further. However, this may change if more modules that require external API calls are implemented.

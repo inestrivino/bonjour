@@ -11,6 +11,9 @@ import (
 	"github.com/inestrivino/bonjour/internal/ui"
 )
 
+// Mock terminal width for rendering test
+var globalWidth = 80
+
 // Helper to construct a mock UI Theme for testing LipGloss output
 func mockTheme() *ui.Theme {
 	return &ui.Theme{
@@ -275,7 +278,7 @@ func TestRenderWeatherData(t *testing.T) {
 	defer func() { weatherBaseURL = origURL }()
 
 	t.Run("Standard Card Rendering", func(t *testing.T) {
-		out := RenderWeatherData(40.4168, -3.7038, "Madrid", theme, false)
+		out := RenderWeatherData(40.4168, -3.7038, "Madrid", theme, false, globalWidth)
 
 		if !strings.Contains(out, "Madrid") {
 			t.Error("expected output to contain city name 'Madrid'")
@@ -286,7 +289,7 @@ func TestRenderWeatherData(t *testing.T) {
 	})
 
 	t.Run("Mini View Rendering", func(t *testing.T) {
-		out := RenderWeatherData(40.4168, -3.7038, "Madrid", theme, true)
+		out := RenderWeatherData(40.4168, -3.7038, "Madrid", theme, true, globalWidth)
 
 		if !strings.Contains(out, "Madrid: 18.0°C (H: 22.0°C / L: 12.0°C)") {
 			t.Errorf("unexpected mini render output: %s", out)
@@ -297,7 +300,7 @@ func TestRenderWeatherData(t *testing.T) {
 		// Point to broken endpoint
 		weatherBaseURL = "http://invalid.invalid"
 
-		out := RenderWeatherData(0, 0, "Unknown", theme, false)
+		out := RenderWeatherData(0, 0, "Unknown", theme, false, globalWidth)
 		if !strings.Contains(out, "Weather Unavailable") {
 			t.Errorf("expected error fallback title 'Weather Unavailable', got: %s", out)
 		}

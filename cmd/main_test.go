@@ -321,3 +321,90 @@ func TestEventsCommand_Execution(t *testing.T) {
 		t.Errorf("expected no error from 'events' command execution, got %v", err)
 	}
 }
+
+// TestRenderComponents covers all layout configurations and condition branches inside renderComponents
+func TestRenderComponents(t *testing.T) {
+	_ = setupTestConfig(t)
+	testTheme := ui.NewTheme("charm")
+	testCfg := &config.Config{
+		User: config.UserConfig{
+			Name:      "TestUser",
+			City:      "Madrid",
+			Latitude:  40.4168,
+			Longitude: -3.7038,
+		},
+		Dashboard: config.DashboardConfig{
+			Theme:       "charm",
+			ShowWeather: true,
+			ShowQuotes:  true,
+			ShowEvents:  true,
+		},
+	}
+
+	tests := []struct {
+		name        string
+		showQuotes  bool
+		showWeather bool
+		showEvents  bool
+		mini        bool
+	}{
+		{
+			name:        "Full rendering - All modules active",
+			showQuotes:  true,
+			showWeather: true,
+			showEvents:  true,
+			mini:        false,
+		},
+		{
+			name:        "Mini rendering - All modules active",
+			showQuotes:  true,
+			showWeather: true,
+			showEvents:  true,
+			mini:        true,
+		},
+		{
+			name:        "Weather only - no quotes or events",
+			showQuotes:  false,
+			showWeather: true,
+			showEvents:  false,
+			mini:        false,
+		},
+		{
+			name:        "Events only - no quotes or weather",
+			showQuotes:  false,
+			showWeather: false,
+			showEvents:  true,
+			mini:        false,
+		},
+		{
+			name:        "Quotes only - no weather or events",
+			showQuotes:  true,
+			showWeather: false,
+			showEvents:  false,
+			mini:        false,
+		},
+		{
+			name:        "No modules active",
+			showQuotes:  false,
+			showWeather: false,
+			showEvents:  false,
+			mini:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := captureStdout(func() {
+				err := renderComponents(tt.showQuotes, tt.showWeather, tt.showEvents, tt.mini, testTheme, testCfg)
+				if err != nil {
+					t.Fatalf("unexpected error rendering components: %v", err)
+				}
+			})
+
+			// Ensure basic greeting executes across all variants
+			if !strings.Contains(output, "TestUser") {
+				t.Errorf("expected output to contain 'TestUser', got: %s", output)
+			}
+		})
+	}
+}

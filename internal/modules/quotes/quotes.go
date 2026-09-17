@@ -142,17 +142,13 @@ func GetDailyQuote() (*Quote, error) {
 }
 
 // RenderQuote renders the quote using the app's current theme.
-func RenderQuote(theme *ui.Theme, miniRender bool) string {
+func RenderQuote(theme *ui.Theme, miniRender bool, width int) string {
 	q, err := GetDailyQuote()
 	if err != nil {
 		if miniRender {
 			return theme.ErrorText.Render("Quote Unavailable")
 		}
-		content := fmt.Sprintf("%s\n\n%s",
-			theme.ErrorText.Render("Quote Unavailable"),
-			theme.Subtitle.Render(err.Error()),
-		)
-		return theme.Card.BorderForeground(theme.Muted).Render(content)
+		return theme.Card.Width(width).Render(theme.ErrorText.Render("Quote Unavailable: ") + err.Error())
 	}
 
 	if miniRender {
@@ -162,10 +158,15 @@ func RenderQuote(theme *ui.Theme, miniRender bool) string {
 		)
 	}
 
-	content := fmt.Sprintf("%s\n\n%s",
-		theme.Body.Italic(true).Render(fmt.Sprintf("“%s”", q.Text)),
-		theme.Title.Align(lipgloss.Right).Render(fmt.Sprintf("— %s", q.Author)),
-	)
+	// Subtract horizontal card padding (4 cells) to prevent internal text overflowing. Minimum is 10.
+	innerWidth := width - 4
+	if innerWidth < 10 {
+		innerWidth = 10
+	}
 
-	return theme.Card.Render(content)
+	quoteText := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Left).Render(theme.Body.Italic(true).Render(fmt.Sprintf("“%s”", q.Text)))
+	authorText := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Right).Render(theme.Title.Render(fmt.Sprintf("— %s", q.Author)))
+
+	content := lipgloss.JoinVertical(lipgloss.Left, quoteText, "", authorText)
+	return theme.Card.Width(width).Render(content)
 }

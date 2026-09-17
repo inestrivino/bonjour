@@ -12,7 +12,9 @@ import (
 	"github.com/inestrivino/bonjour/internal/modules/weather"
 	"github.com/inestrivino/bonjour/internal/ui"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // COBRA CONFIGURATION FOR FLAGS, ETC
@@ -49,7 +51,7 @@ var runConfigWizard = config.ConfigWizard
 // configCmd represents the 'bonjour config' subcommand
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "open the configuration wizard to edit your settings",
+	Short: "Open the configuration wizard to edit your settings",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.LoadOrRunWizard()
 		if err != nil {
@@ -67,7 +69,7 @@ var runEventsWizard = events.EventsWizard
 // eventsCmd represents the 'bonjour events' subcommand
 var eventsCmd = &cobra.Command{
 	Use:   "events",
-	Short: "open the events wizard to add or delete events",
+	Short: "Open the events wizard to add or delete events",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.LoadOrRunWizard()
 		if err != nil {
@@ -83,37 +85,20 @@ var eventsCmd = &cobra.Command{
 
 // Main execution logic
 func runApplication(opts CLIOptions) error {
-	// Load or create configuration
+	// Obtain the user's configuration
 	cfg, err := config.LoadOrRunWizard()
 	if err != nil {
 		log.Fatalf("error running wizard: %v", err)
 	}
 
-	// Initialize the theme from the configuration
+	// Obtain the user's theme
 	theme := ui.NewTheme(cfg.Dashboard.Theme)
 
-	// Render the banner
-	if !opts.Mini {
-		fmt.Println(theme.Banner.Render(asciiTitle))
-	}
-
-	// Render greeting
-	greeting(cfg, theme, time.Now().Hour())
-
-	// Render the active modules
+	// Obtain the modules to be shown
 	showQuotes, showWeather, showEvents := determineModulesToShow(opts, cfg)
-	miniRender := opts.Mini
-	if showQuotes {
-		fmt.Println(quotes.RenderQuote(theme, miniRender))
-	}
-	if showWeather {
-		fmt.Println(weather.RenderWeatherData(cfg.User.Latitude, cfg.User.Longitude, cfg.User.City, theme, miniRender))
-	}
-	if showEvents {
-		fmt.Println(events.RenderEvents(theme, miniRender))
-	}
 
-	return nil
+	// Render the components according to the user's choices
+	return renderComponents(showQuotes, showWeather, showEvents, opts.Mini, theme, cfg)
 }
 
 // Cobra initialization for commands and flags
@@ -151,6 +136,67 @@ const asciiTitle = `
     \/___/  \/___/  \/_/\/_/\ \_\ \/___/  \/___/  \/_/ 
                            \ \____/                    
                             \/___/`
+
+// renderComponents is a helper function that takes in the relevant information from the config, theme, and user's module choices, to render the application's results
+func renderComponents(showQuotes, showWeather, showEvents, mini bool, theme *ui.Theme, cfg *config.Config) error {
+	// If the mini mode is activated, do not show the banner
+	if !mini {
+		fmt.Println(theme.Banner.Render(asciiTitle))
+	}
+	// Render the greeting
+	greeting(cfg, theme, time.Now().Hour())
+
+	// Fetch terminal width using x/term
+	fd := int(os.Stdout.Fd())
+	termWidth, _, err := term.GetSize(fd)
+	if err != nil || termWidth <= 0 {
+		termWidth = 90 // Fallback width for non-TTY environments
+	}
+
+	// Calculate target width (capped at 100 for proper layout ratios)
+	totalWidth := termWidth - 4
+	if totalWidth > 100 {
+		totalWidth = 100
+	}
+
+	// We create a string object for the entire stdout result to show
+	// The modules are appended to this
+	var sections []string
+
+	// The quote should take the entire width of the upper section
+	if showQuotes {
+		sections = append(sections, quotes.RenderQuote(theme, mini, totalWidth))
+	}
+
+	// The weather and events appear in side to side in the bottom section
+	if showWeather && showEvents {
+		if mini {
+			// Mini mode: Render full-width and stack vertically
+			wCard := weather.RenderWeatherData(cfg.User.Latitude, cfg.User.Longitude, cfg.User.City, theme, true, totalWidth)
+			eCard := events.RenderEvents(theme, true, totalWidth)
+
+			sections = append(sections, wCard, eCard)
+		} else {
+			const gap = 2
+			availableWidth := totalWidth - gap
+			leftWidth := availableWidth / 2
+			rightWidth := availableWidth - leftWidth
+
+			wCard := weather.RenderWeatherData(cfg.User.Latitude, cfg.User.Longitude, cfg.User.City, theme, false, leftWidth)
+			eCard := events.RenderEvents(theme, false, rightWidth)
+
+			gridRow := lipgloss.JoinHorizontal(lipgloss.Top, wCard, "  ", eCard)
+			sections = append(sections, gridRow)
+		}
+	} else if showWeather {
+		sections = append(sections, weather.RenderWeatherData(cfg.User.Latitude, cfg.User.Longitude, cfg.User.City, theme, mini, totalWidth))
+	} else if showEvents {
+		sections = append(sections, events.RenderEvents(theme, mini, totalWidth))
+	}
+
+	fmt.Println(lipgloss.JoinVertical(lipgloss.Left, sections...))
+	return nil
+}
 
 // greeting takes in a Config type object and a theme type object, from which it renders a greeting based on the user's name, time of day, and theme
 func greeting(cfg *config.Config, theme *ui.Theme, hour int) {

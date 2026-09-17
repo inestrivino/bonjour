@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/inestrivino/bonjour/internal/ui"
 )
 
@@ -118,40 +119,33 @@ func getASCIIArt(w *WeatherResult) string {
 }
 
 // RenderWeatherData takes in the latitude and longitude, as well as a theme object, calls the fetch function and uses the theme information to render the result accordingly
-func RenderWeatherData(lat, lon float64, city string, theme *ui.Theme, miniRender bool) string {
+func RenderWeatherData(lat, lon float64, city string, theme *ui.Theme, miniRender bool, width int) string {
 	data, err := fetchWeatherData(lat, lon)
 	if err != nil {
 		if miniRender {
 			return theme.ErrorText.Render(fmt.Sprintf("Weather: %s", err.Error()))
 		}
-		content := fmt.Sprintf("%s\n\n%s",
-			theme.ErrorText.Render("Weather Unavailable"),
-			theme.Subtitle.Render(err.Error()),
-		)
-		return theme.Card.BorderForeground(theme.Muted).Render(content)
+		return theme.Card.Width(width).Render(theme.ErrorText.Render("Weather Unavailable: ") + err.Error())
 	}
 
 	if miniRender {
-		// Single-line compact view showing essential temperature and location
 		return fmt.Sprintf("%s: %.1f°C (H: %.1f°C / L: %.1f°C)",
-			theme.Title.Render(city),
-			data.CurrentTemp,
-			data.MaxTemp,
-			data.MinTemp,
-		)
+			theme.Title.Render(city), data.CurrentTemp, data.MaxTemp, data.MinTemp)
 	}
 
-	asciiArt := getASCIIArt(data)
-	todayDate := time.Now().Format("02/01/2006")
+	innerWidth := width - 4
+	if innerWidth < 10 {
+		innerWidth = 10
+	}
 
-	// Header with current date
-	header := theme.Title.Render(fmt.Sprintf("%s in %s", todayDate, city))
+	header := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center).Render(
+		theme.Title.Render(fmt.Sprintf("%s in %s", time.Now().Format("02/01/2006"), city)),
+	)
+	asciiArt := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center).Render(
+		theme.Banner.Foreground(theme.Secondary).Render(getASCIIArt(data)),
+	)
 
-	// ASCII art
-	artBlock := theme.Banner.Foreground(theme.Secondary).Render(asciiArt)
-
-	// Weather stats
-	metrics := fmt.Sprintf(
+	rawMetrics := fmt.Sprintf(
 		"%s %.1f°C\n%s %.1f°C / %.1f°C\n%s %d%%\n%s %d%%",
 		theme.Subtitle.Render("Current:       "), data.CurrentTemp,
 		theme.Subtitle.Render("Max / Min:     "), data.MaxTemp, data.MinTemp,
@@ -159,7 +153,9 @@ func RenderWeatherData(lat, lon float64, city string, theme *ui.Theme, miniRende
 		theme.Subtitle.Render("Cloud cover:   "), data.CloudCover,
 	)
 
-	content := fmt.Sprintf("%s\n\n%s\n\n%s", header, artBlock, metrics)
+	leftAlignedMetrics := lipgloss.NewStyle().Align(lipgloss.Left).Render(rawMetrics)
+	metricsBlock := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center).Render(leftAlignedMetrics)
+	content := lipgloss.JoinVertical(lipgloss.Left, header, "", asciiArt, "", metricsBlock)
 
-	return theme.Card.Render(content)
+	return theme.Card.Width(width).Render(content)
 }

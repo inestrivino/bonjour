@@ -55,7 +55,7 @@ func daysLeft(event *config.EventConfig) (int, error) {
 }
 
 // RenderEvents displays up to the 5 closest upcoming events on the chosen theme.
-func RenderEvents(theme *ui.Theme, miniRender bool) string {
+func RenderEvents(theme *ui.Theme, miniRender bool, width int) string {
 	configPath, err := config.GetConfigPath()
 	if err != nil {
 		return renderErrorCard(theme, "Events Unavailable", err.Error())
@@ -70,10 +70,7 @@ func RenderEvents(theme *ui.Theme, miniRender bool) string {
 		if miniRender {
 			return theme.Subtitle.Render("No events scheduled")
 		}
-		emptyContent := theme.Subtitle.Render("No upcoming events scheduled.")
-		return theme.Card.Render(
-			lipgloss.JoinVertical(lipgloss.Left, theme.Title.Render("Events"), "", emptyContent),
-		)
+		return theme.Card.Width(width).Render(theme.Subtitle.Render("No upcoming events scheduled."))
 	}
 
 	type eventItem struct {
@@ -89,12 +86,10 @@ func RenderEvents(theme *ui.Theme, miniRender bool) string {
 		if evt.WarningStart != "" && evt.WarningStart > todayStr {
 			continue
 		}
-
 		days, err := daysLeft(&evt)
 		if err != nil {
 			continue
 		}
-
 		if days >= 0 {
 			upcoming = append(upcoming, eventItem{event: evt, days: days})
 		}
@@ -102,12 +97,9 @@ func RenderEvents(theme *ui.Theme, miniRender bool) string {
 
 	if len(upcoming) == 0 {
 		if miniRender {
-			return theme.Subtitle.Render("No active events today")
+			return theme.Subtitle.Render("No active event reminders for today")
 		}
-		emptyContent := theme.Subtitle.Render("No active event reminders for today.")
-		return theme.Card.Render(
-			lipgloss.JoinVertical(lipgloss.Left, theme.Title.Render("Events"), "", emptyContent),
-		)
+		return theme.Card.Width(width).Render(theme.Subtitle.Render("No active event reminders for today"))
 	}
 
 	sort.Slice(upcoming, func(i, j int) bool {
@@ -120,14 +112,16 @@ func RenderEvents(theme *ui.Theme, miniRender bool) string {
 		if item.days == 0 {
 			daysText = "Today!"
 		}
-		return fmt.Sprintf("%s: %s",
-			theme.Title.Render(item.event.Title),
-			theme.Body.Render(daysText),
-		)
+		return fmt.Sprintf("%s: %s", theme.Title.Render(item.event.Title), theme.Body.Render(daysText))
 	}
 
 	if len(upcoming) > 5 {
 		upcoming = upcoming[:5]
+	}
+
+	innerWidth := width - 4
+	if innerWidth < 10 {
+		innerWidth = 10
 	}
 
 	var rows []string
@@ -143,18 +137,15 @@ func RenderEvents(theme *ui.Theme, miniRender bool) string {
 		}
 
 		titleText := theme.Body.Render(item.event.Title)
-		dateText := lipgloss.NewStyle().Foreground(theme.Muted).Render(fmt.Sprintf("(%s)", item.event.Date))
-
-		leftSide := fmt.Sprintf("%s %s", titleText, dateText)
-		row := lipgloss.JoinHorizontal(lipgloss.Center, leftSide, "  —  ", daysText)
-		rows = append(rows, row)
+		row := lipgloss.JoinHorizontal(lipgloss.Center, titleText, "   ", daysText)
+		rows = append(rows, lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center).Render(row))
 	}
 
-	header := theme.Title.Render("Upcoming Events")
+	header := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Center).Render(theme.Title.Render("Upcoming Events"))
 	body := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	content := lipgloss.JoinVertical(lipgloss.Left, header, "", body)
 
-	return theme.Card.Render(content)
+	return theme.Card.Width(width).Render(content)
 }
 
 // Helper function to render errors in a uniform way

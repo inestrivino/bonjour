@@ -14,6 +14,9 @@ import (
 	"github.com/inestrivino/bonjour/internal/ui"
 )
 
+// Mock terminal width for rendering test
+var globalWidth = 80
+
 // Helper to isolate cache directory cross-platform
 func setupTestEnv(t *testing.T) string {
 	t.Helper()
@@ -303,7 +306,7 @@ func TestRenderQuote(t *testing.T) {
 	saveCache(cache)
 
 	t.Run("Standard View Rendering", func(t *testing.T) {
-		out := RenderQuote(theme, false)
+		out := RenderQuote(theme, false, globalWidth)
 
 		if !strings.Contains(out, "“Stay hungry, stay foolish.”") {
 			t.Errorf("expected formatted quote text in output, got: %s", out)
@@ -314,7 +317,7 @@ func TestRenderQuote(t *testing.T) {
 	})
 
 	t.Run("Mini View Rendering", func(t *testing.T) {
-		out := RenderQuote(theme, true)
+		out := RenderQuote(theme, true, globalWidth)
 
 		if !strings.Contains(out, "“Stay hungry, stay foolish.”") || !strings.Contains(out, "— Steve Jobs") {
 			t.Errorf("unexpected mini view rendering: %s", out)
@@ -334,12 +337,12 @@ func TestRenderQuote(t *testing.T) {
 		quoteAPIURL = server.URL
 		defer func() { quoteAPIURL = origURL }()
 
-		stdOut := RenderQuote(theme, false)
+		stdOut := RenderQuote(theme, false, globalWidth)
 		if !strings.Contains(stdOut, "Quote Unavailable") {
 			t.Errorf("expected error title 'Quote Unavailable', got: %s", stdOut)
 		}
 
-		miniOut := RenderQuote(theme, true)
+		miniOut := RenderQuote(theme, true, globalWidth)
 		if !strings.Contains(miniOut, "Quote Unavailable") {
 			t.Errorf("expected mini error string 'Quote Unavailable', got: %s", miniOut)
 		}
