@@ -32,3 +32,4 @@ go.work.sum
 TODO.md
 # Added by goreleaser init:
 dist/
+bin/
