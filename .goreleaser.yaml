@@ -1,0 +1,58 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: bonjour
+    main: ./cmd/main.go
+    binary: bonjour
+    env:
+      - CGO_ENABLED=0
+    goos:
+    # The binaries are built for the following OS
+      - linux
+      - darwin
+      - windows
+    goarch:
+    # The binaries are built for the following architectures
+      - amd64
+      - arm64
+
+# The binaries are made into tar.gz/zip files with the name bonjour_version_OS_arch
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+# Docker images of the project are also created and uploaded into the github container repository
+dockers_v2:
+  - images:
+      - '{{ if .IsSnapshot }}bonjour{{ else }}ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY_OWNER" "local" }}/bonjour{{ end }}'
+    tags:
+      - "{{ .Version }}"
+      - "latest"
+    dockerfile: Dockerfile
+    labels:
+      org.opencontainers.image.title: "{{ .ProjectName }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+
+release:
+  github:
+    owner: '{{ envOrDefault "GITHUB_REPOSITORY_OWNER" "local" }}'
+    name: "{{ .ProjectName }}"
+  draft: false
+  prerelease: auto
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

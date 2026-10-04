@@ -30,3 +30,5 @@ go.work.sum
 
 # Personal TO DO file for project development
 TODO.md
+# Added by goreleaser init:
+dist/

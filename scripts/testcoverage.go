@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -15,7 +16,7 @@ var execCommand = exec.Command
 
 func main() {
 	if err := run(os.Stdout); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "COVERAGE CHECK FAILED: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -24,7 +25,7 @@ func main() {
 func run(stdout io.Writer) error {
 	// Names for the files produced during execution
 	rawProfile := "coverage_raw.out"
-	filteredProfile := "coverage_filtered.out"
+	filteredProfile := "coverage.out"
 	htmlReport := "coverage.html"
 
 	// Remove the raw coverage file
@@ -55,9 +56,16 @@ func run(stdout io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("error running cover tool: %w", err)
 	}
-	fmt.Fprintln(stdout, string(summaryOutput))
 
-	// Information to the user about the HTML coverage report being produced
+	summaryStr := string(summaryOutput)
+	fmt.Fprintln(stdout, summaryStr)
+
+	// Extract and check overall coverage percentage
+	totalCoverage, err := parseTotalCoverage(summaryStr)
+	if err != nil {
+		return fmt.Errorf("failed to parse total coverage: %w", err)
+	}
+
 	fmt.Fprintln(stdout, "generating HTML coverage report...")
 	// We execute the go command to transform the filtered coverage results into an html and print a success or error message
 	htmlCmd := execCommand("go", "tool", "cover", "-html="+filteredProfile, "-o", htmlReport)
@@ -66,10 +74,33 @@ func run(stdout io.Writer) error {
 	}
 	fmt.Fprintf(stdout, "success! Filtered HTML report saved to: %s\n", htmlReport)
 
+	// Validate coverage threshold
+	const minCoverage = 90.0
+	if totalCoverage < minCoverage {
+		return fmt.Errorf("total coverage %.1f%% is below the required threshold of %.1f%%", totalCoverage, minCoverage)
+	}
+
+	fmt.Fprintf(stdout, "PASSED: Total coverage is %.1f%% (Threshold: %.1f%%)\n", totalCoverage, minCoverage)
 	return nil
 }
 
-// Helper function to filter out files that shouldn't be counted into the overall coverage percentage as they can't be tested
+// parseTotalCoverage extracts the final percentage value from `go tool cover -func` output.
+func parseTotalCoverage(output string) (float64, error) {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "total:") {
+			fields := strings.Fields(line)
+			if len(fields) < 3 {
+				return 0, fmt.Errorf("malformed total line: %s", line)
+			}
+			// fields[2] contains the percentage
+			rawPercent := strings.TrimSuffix(fields[len(fields)-1], "%")
+			return strconv.ParseFloat(rawPercent, 64)
+		}
+	}
+	return 0, fmt.Errorf("total coverage summary line not found")
+}
+
 func filterFiles(inputPath, outputPath string) error {
 	inFile, err := os.Open(inputPath)
 	if err != nil {
