@@ -4,8 +4,6 @@
 
 <img src="./assets/bonjour logo.png" alt="bonjour's logo" width="400"/>
 
-<div>
-
 <!-- Workflow Status Badge -->
 [![Tests](https://github.com/inestrivino/bonjour/actions/workflows/testcoverage.yaml/badge.svg)](https://github.com/inestrivino/bonjour/actions/workflows/testcoverage.yaml) <!-- Coverage Badge --> ![Coverage](./assets/coveragebadge.svg) <!-- Tag badge --> [![Tag](https://img.shields.io/github/v/tag/inestrivino/bonjour?color=blue&label=version)](https://github.com/inestrivino/bonjour/releases/latest) <!-- License badge --> [![License](https://img.shields.io/github/license/inestrivino/bonjour?color=brightgreen)](LICENSE)
 
