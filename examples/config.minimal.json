@@ -1,0 +1,15 @@
+{
+  "user": {
+    "name": "John Doe",
+    "latitude": 0,
+    "longitude": 0,
+    "city": ""
+  },
+  "dashboard": {
+    "theme": "charm",
+    "show_weather": true,
+    "show_quotes": true,
+    "show_events": true
+  },
+  "events": []
+}

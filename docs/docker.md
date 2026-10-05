@@ -57,6 +57,7 @@ If you want to completely remove the Docker image, the container instance, and a
 ```bash
 docker rm -f bonjour
 ```
+
 Verification: Running `docker ps -a | grep my-bonjour` should return nothing.
 
 3. Run the command to delete all bonjour-related images:
@@ -64,6 +65,7 @@ Verification: Running `docker ps -a | grep my-bonjour` should return nothing.
 ```bash
 docker rmi -f $(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^bonjour')
 ```
+
 Verification: Running `docker images | grep bonjour` should return nothing.
 
 **WARNING: THE FOLLOWING STEP WILL DELETE ALL DOCKER IMAGE RELATED DATA FROM YOUR COMPUTER, NOT JUST BONJOUR RELATED ONES. THIS IS A DESTRUCTIVE ACTION AND CAN'T BE UNDONE!**
@@ -73,4 +75,5 @@ If you want to delete all information associated to your docker images then run:
 ```bash
 docker system prune -a --volumes -f
 ```
+
 Verification: Check that there is no space still occupied with `docker system df`.

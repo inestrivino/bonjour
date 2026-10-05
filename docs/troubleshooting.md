@@ -42,11 +42,11 @@ If you are a macOS user, you may receive the following error/warning:
 bonjour cannot be opened because it is from an unidentified developer
 ```
 
-This happens because pre-compiled binaries from GitHub Releases aren't signed with an Apple Developer certificate. 
+This happens because pre-compiled binaries from GitHub Releases aren't signed with an Apple Developer certificate.
 macOS users can allow execution in one of two ways:
 
 1. Run once in terminal to remove the quarantine attribute:
-    
+  
     ```bash
     xattr -d com.apple.quarantine /usr/local/bin/bonjour
     ```

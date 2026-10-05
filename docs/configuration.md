@@ -12,7 +12,6 @@ By default, `bonjour` reads and persists configuration settings at OS-specific p
 | **macOS** | `~/Library/Application Support/bonjour/config.json` |
 | **Windows** | `%APPDATA%\bonjour\config.json` |
 
-
 ## Configuration Precedence
 
 When multiple configuration sources exist, `bonjour` resolves values in the following order (highest priority first):

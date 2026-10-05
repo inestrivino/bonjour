@@ -29,10 +29,10 @@ Flags allow you to customize the layout and content shown when launching `bonjou
 | Flag | Short | Description |
 | --- | --- | --- |
 | `--help` | `-h` | Display help information for `bonjour` |
-| `--mini` |  | Execute and display a compact dashboard view |
-| `--noevents` |  | Suppress/hide the events module |
-| `--noquotes` |  | Suppress/hide the daily quotes module |
-| `--noweather` |  | Suppress/hide the weather module |
+| `--mini` | | Execute and display a compact dashboard view |
+| `--noevents` | | Suppress/hide the events module |
+| `--noquotes` | | Suppress/hide the daily quotes module |
+| `--noweather` | | Suppress/hide the weather module |
 | `--version` | `-v` | Display the current installed version of `bonjour` |
 
 ### Flag Examples
