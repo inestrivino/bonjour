@@ -1,0 +1,43 @@
+name: Unit tests and coverage check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run tests with coverage check
+        run: go run ./scripts/testcoverage.go
+
+      # Ensures the ./assets folder exists before generating the badge
+      - name: Ensure assets directory exists
+        run: mkdir -p ./assets
+
+      # Generate coveragebadge.svg inside ./assets/
+      - name: Generate Coverage Badge
+        uses: tj-actions/coverage-badge-go@v3
+        with:
+          filename: ./coverage.out
+          target: ./assets/coveragebadge.svg
+
+      # Commit and push the updated badge back to the repository
+      - name: Commit Coverage Badge
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update coverage badge [skip ci]"
+          file_pattern: "assets/coveragebadge.svg"

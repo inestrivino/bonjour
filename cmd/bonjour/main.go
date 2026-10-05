@@ -31,7 +31,7 @@ type CLIOptions struct {
 
 var (
 	cliOpts CLIOptions
-	version = "1.0.0"
+	version = "0.0.1"
 )
 
 // COBRA COMMANDS

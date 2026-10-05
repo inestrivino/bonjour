@@ -7,18 +7,8 @@
 <div>
 
 <!-- Workflow Status Badge -->
-[![Tests](https://github.com/inestrivino/bonjour/actions/workflows/coverage.yaml/badge.svg)](https://github.com/inestrivino/bonjour/actions/workflows/coverage.yaml)
+[![Tests](https://github.com/inestrivino/bonjour/actions/workflows/testcoverage.yaml/badge.svg)](https://github.com/inestrivino/bonjour/actions/workflows/testcoverage.yaml) <!-- Coverage Badge --> ![Coverage](./assets/coveragebadge.svg) <!-- Tag badge --> [![Tag](https://img.shields.io/github/v/tag/inestrivino/bonjour?color=blue&label=version)](https://github.com/inestrivino/bonjour/releases/latest) <!-- License badge --> [![License](https://img.shields.io/github/license/inestrivino/bonjour?color=brightgreen)](LICENSE)
 
-<!-- Codecov Coverage Badge -->
-[![Coverage](https://codecov.io/gh/inestrivino/bonjour/branch/main/graph/badge.svg)](https://codecov.io/gh/inestrivino/bonjour)
-
-<!-- Tag badge -->
-[![Tag](https://img.shields.io/github/v/tag/inestrivino/bonjour?color=blue&label=version)](https://github.com/inestrivino/bonjour/releases/latest)
-
-<!-- License badge -->
-[![License](https://img.shields.io/github/license/inestrivino/bonjour?color=brightgreen)](LICENSE)
-
-</div>
 </div>
 
 > bonjour is a CLI dashboard application that helps you start your day the right way. Receive a greeting, a motivational quote, weather information for your area, and a list of upcoming events!
