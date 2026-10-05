@@ -30,9 +30,9 @@ Flags allow you to customize the layout and content shown when launching `bonjou
 | --- | --- | --- |
 | `--help` | `-h` | Display help information for `bonjour` |
 | `--mini` | | Execute and display a compact dashboard view |
-| `--noevents` | | Suppress/hide the events module |
-| `--noquotes` | | Suppress/hide the daily quotes module |
-| `--noweather` | | Suppress/hide the weather module |
+| `--noevents` | | Hide the events module |
+| `--noquotes` | | Hide the daily quotes module |
+| `--noweather` | | Hide the weather module |
 | `--version` | `-v` | Display the current installed version of `bonjour` |
 
 ### Flag Examples
@@ -98,3 +98,73 @@ NO_COLOR=1 bonjour
 export NO_COLOR=1
 bonjour
 ```
+
+## Customizing the look
+
+By running the `bonjour config` command and then selecting `dashboard configuration` and clicking enter, the user is given a list of UI themes to choose from. Here is the full list of themes and how each looks on a dark terminal:
+
+- charm
+
+<img src="../assets/charm.png" alt="bonjour UI with charm theme" width="400px">
+
+- dracula
+
+<img src="../assets/dracula.png" alt="bonjour UI with charm theme" width="400px">
+
+- catpuccin
+
+<img src="../assets/catpuccin.png" alt="bonjour UI with charm theme" width="400px">
+
+- base16
+
+<img src="../assets/base16.png" alt="bonjour UI with charm theme" width="400px">
+
+## Automatic execution
+
+To have `bonjour` greet you every time you open a new terminal window, add the command to the end of your shell startup configuration file after a successful installation:
+
+### Linux & macOS
+
+1. Identify your shell by running:
+
+   ```bash
+   echo $SHELL
+   ```
+
+2. Add `bonjour` to your shell configuration. You can also add flags directly (like `--mini`).
+   * bash (`./bashrc`):
+
+    ```bash
+    echo -e "\nbonjour" >> ~/.bashrc
+    ```
+
+   * zsh (`./zshrc`):
+
+    ```bash
+    echo -e "\nbonjour" >> ~/.zshrc
+    ```
+
+3. Restart your terminal or reload your config
+
+   ```bash 
+   source ~/.bashrc
+   ```
+
+4. Open a terminal. `bonjour` should have started up automatically!
+
+### Windows
+
+1. Open PowerShell and check if a profile script exists, or create one:
+
+```PowerShell
+if (!(Test-Path $PROFILE)) { New-Item -Type File -Path $PROFILE -Force }
+```
+
+2. Open your profile in a text editor:
+
+```PowerShell
+notepad $PROFILE
+```
+
+3. Add bonjour on a new line at the bottom of the file, save, and exit.
+4. Reopen PowerShell to see bonjour run automatically.

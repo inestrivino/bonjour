@@ -20,17 +20,39 @@ sudo chmod +x /usr/local/bin/bonjour
 
 ### Command Not Found
 
-If you are receiving an error that says:
+1. If, while **installing from binaries**, you are receiving an error that says:
 
-```bash
-command not found: bonjour
-```
+    ```bash
+    command not found: bonjour
+    ```
 
-It is probably happening due to `/usr/local/bin` not being in your shell's `$PATH`. You can add it via `~/.bashrc` or `~/.zshrc`:
+    It is probably happening due to `/usr/local/bin` not being in your shell's `$PATH`. You can add it via `~/.bashrc` or `~/.zshrc`:
 
-```bash
-export PATH="/usr/local/bin:$PATH"
-```
+    ```bash
+    export PATH="/usr/local/bin:$PATH"
+    ```
+
+2. If you receive this error after having performed the **Go installation**, then make sure that `$GOPATH/bin` is in the system `$PATH`. Configure your `$PATH` to fix it:
+
+    macOS:
+
+    ```bash
+    echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc
+    source ~/.zshrc
+    ```
+
+    Linux:
+
+    ```bash
+    echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
+
+    Windows (PowerShell):
+
+    ```PowerShell
+    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\go\bin", "User")
+    ```
 
 ## Execution problems
 

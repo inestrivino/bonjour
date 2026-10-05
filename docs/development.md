@@ -8,12 +8,46 @@ Before building `bonjour` locally, make sure you have the following installed:
 
 * **Go:** Version `1.22+`
 * **Git:** For source control
-* **Goreleaser (Optional):** For building release binaries and docker images of the project locally
+* **Goreleaser v2 (Optional):** For building release binaries and docker images of the project locally
 * **Docker (Optional):** For testing containerized builds
 
 Make sure to read `CONTRIBUTING.md` before doing anything else.
 
-## Getting Started
+## Project structure
+
+Here is an overview of the project with explanations:
+
+```txt
+├── .github/                  # GitHub configuration and automation
+│   └── workflows/
+│       ├── coverage.yaml     # Test passing and code coverage tracking workflow
+│       └── release.yaml      # Automated release pipeline (GoReleaser)
+├── cmd/                      # Application entry points
+│   ├── main.go               # Main executable logic
+│   └── main_test.go          # Tests for entry point initialization
+├── docs/                     # Project documentation 
+├── examples/                 # Example files
+├── internal/                 # Private application code
+│   ├── config/               # Application configuration parsing and handling
+│   │   ├── config.go
+│   │   └── config_test.go
+│   ├── modules/              # Core feature modules
+│   │   ├── events/           # Events domain logic
+│   │   ├── quotes/           # Quotes domain logic
+│   │   └── weather/          # Weather domain logic
+│   └── ui/                   # Terminal UI logic
+├── scripts/                  # Helper scripts for installation, and testing
+├── .gitignore                # Files and patterns ignored by Git
+├── .goreleaser.yaml          # GoReleaser release configuration
+├── CONTRIBUTING.md           # Guidelines for contributing to the project
+├── Dockerfile                # Docker build instructions
+├── go.mod                    # Go module definitions and core dependencies
+├── go.sum                    # Go module dependency checksums
+├── LICENSE                   # License terms
+└── README.md                 
+```
+
+## Development workflow
 
 1. **Clone the repository:**
 
@@ -55,7 +89,11 @@ go run ./scripts/testcoverage.go
 
 The result will be displayed in the terminal's output. This command also creates a complementary `coverage.html` at the root of the project, open it to see which lines are still uncovered.
 
-8. **Submit your work**: Commit your changes, push your branch, and open a Pull Request against the main branch.
+8. **Submit your work**: Commit your changes, push your branch, and open a Pull Request against the main branch. Wait for a code review.
+
+## Branch naming rules
+
+All branches dedicated to new features should be called `[feature]-dev`. All branches related to bug fixes should be called `[bug]-fix`.
 
 ## Common development commands
 
