@@ -53,9 +53,6 @@ source:
   name_template: "{{ .ProjectName }}_{{ .Version }}_source"
 
 release:
-  github:
-    owner: '{{ envOrDefault "GITHUB_REPOSITORY_OWNER" "local" }}'
-    name: "{{ .ProjectName }}"
   draft: false
   prerelease: auto
 
