@@ -1,4 +1,4 @@
-# Introduction
+# Contributing Guide
 
 > Thank you for taking the time to contribute to `bonjour`! Contributions like yours can make this project great.
 

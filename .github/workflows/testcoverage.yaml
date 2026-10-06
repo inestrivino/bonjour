@@ -29,15 +29,25 @@ jobs:
         run: mkdir -p ./assets
 
       # Generate coveragebadge.svg inside ./assets/
-      - name: Generate Coverage Badge
-        uses: tj-actions/coverage-badge-go@v3
-        with:
-          filename: ./coverage.out
-          target: ./assets/coveragebadge.svg
+      - name: Generate SVG Badge
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            COLOR="red"
+          elif (( $(echo "$COVERAGE < 90" | bc -l) )); then
+            COLOR="yellow"
+          else
+            COLOR="brightgreen"
+          fi
+          curl -s "https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}.svg" > assets/coveragebadge.svg
 
       # Commit and push the updated badge back to the repository
       - name: Commit Coverage Badge
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
+          branch: badges
+          create_branch: true
+          push_options: '--force'
           commit_message: "chore: update coverage badge [skip ci]"
           file_pattern: "assets/coveragebadge.svg"
