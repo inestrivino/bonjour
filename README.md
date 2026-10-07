@@ -131,8 +131,12 @@ The functionality to accept multiple commands and flags was implemented using [C
 
 ## License and authorship
 
-This project uses the [GPLv3 License](./LICENSE).
+This project is open-source software licensed under the [GNU General Public License v3.0 (GPLv3)](./LICENSE).
+
+**Important Note on Commercial Use:** While the source code of this application is freely available under the GPLv3, **this software cannot be legally embedded into commercial products, services, or internal business workflows** as is. This restriction is due to its integration with the **Open-Meteo API**, which restricts its free, key-less tier strictly to **non-commercial use**. Any commercial deployment requires a paid commercial license directly from Open-Meteo, or changing the source code to use a different API.
 
 ## Related documentation
 
 * [Configuration Documentation](./docs/configuration.md): Learn where and how bonjour stores the user's configuration.
+* [Troubleshooting Documentation](./docs/troubleshooting.md): See common troubleshooting fixes for installing and running bonjour.
+* [Usage](./docs/usage.md): Learn all commands and flags you can use in Go and how.

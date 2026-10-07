@@ -70,7 +70,7 @@ Here is an overview of the project with explanations:
 4. **Run it with go:**
 
   ```bash
-  go run ./cmd/main.go
+  go run ./cmd/bonjour/main.go
   ```
 
 5. If all works well, **start editing the code**: Create new features or fix bugs. Don't forget to create the corresponding tests for every feature you create.

@@ -58,7 +58,7 @@ If you want to completely remove the Docker image, the container instance, and a
 docker rm -f bonjour
 ```
 
-Verification: Running `docker ps -a | grep my-bonjour` should return nothing.
+Verification: Running `docker ps -a | grep bonjour` should return nothing.
 
 3. Run the command to delete all bonjour-related images:
 
