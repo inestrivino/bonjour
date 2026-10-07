@@ -152,9 +152,12 @@ func RenderQuote(theme *ui.Theme, miniRender bool, width int) string {
 	}
 
 	if miniRender {
-		return fmt.Sprintf("%s %s",
+		// Appended a subtle, faint attribution so it fits on a single compact line
+		attrib := lipgloss.NewStyle().Faint(true).Render("ZenQuotes.io")
+		return fmt.Sprintf("%s %s  %s",
 			theme.Body.Italic(true).Render(fmt.Sprintf("“%s”", q.Text)),
 			theme.Subtitle.Render(fmt.Sprintf("— %s", q.Author)),
+			attrib,
 		)
 	}
 
@@ -167,6 +170,14 @@ func RenderQuote(theme *ui.Theme, miniRender bool, width int) string {
 	quoteText := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Left).Render(theme.Body.Italic(true).Render(fmt.Sprintf("“%s”", q.Text)))
 	authorText := lipgloss.NewStyle().Width(innerWidth).Align(lipgloss.Right).Render(theme.Title.Render(fmt.Sprintf("— %s", q.Author)))
 
-	content := lipgloss.JoinVertical(lipgloss.Left, quoteText, "", authorText)
+	// Subtle, right-aligned attribution styled with Faint to keep it professional and compliant
+	attribText := lipgloss.NewStyle().
+		Width(innerWidth).
+		Align(lipgloss.Right).
+		Faint(true).
+		Render("Quotes via ZenQuotes.io")
+
+	// Joined vertically with an extra empty line spacer for clean padding
+	content := lipgloss.JoinVertical(lipgloss.Left, quoteText, "", authorText, "", attribText)
 	return theme.Card.Width(width).Render(content)
 }
