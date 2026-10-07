@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/inestrivino/bonjour/internal/ui"
@@ -26,6 +27,18 @@ func mockTheme() *ui.Theme {
 		ErrorText: lipgloss.NewStyle(),
 		Card:      lipgloss.NewStyle(),
 	}
+}
+
+// Helper to isolate cache directory cross-platform
+func setupTestEnv(t *testing.T) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+
+	t.Setenv("XDG_CACHE_HOME", tmpDir) // Linux / BSD
+	t.Setenv("HOME", tmpDir)           // macOS
+	t.Setenv("LOCALAPPDATA", tmpDir)   // Windows
+
+	return tmpDir
 }
 
 // GEOCODING TESTS
@@ -207,9 +220,81 @@ func TestGetASCIIArt(t *testing.T) {
 	}
 }
 
+func TestIsExpired(t *testing.T) {
+	t.Run("Not expired (recent timestamp)", func(t *testing.T) {
+		// A timestamp from 30 minutes ago should NOT be expired
+		recentTime := time.Now().Add(-30 * time.Minute)
+
+		if isExpired(recentTime) {
+			t.Error("expected recent timestamp to not be expired, got true")
+		}
+	})
+
+	t.Run("Expired (older than 60 minutes)", func(t *testing.T) {
+		// A timestamp from 65 minutes ago SHOULD be expired
+		oldTime := time.Now().Add(-65 * time.Minute)
+
+		if !isExpired(oldTime) {
+			t.Error("expected old timestamp to be expired, got false")
+		}
+	})
+
+	t.Run("Edge case (exactly 60 minutes ago)", func(t *testing.T) {
+		// Exactly 60 minutes ago (expired)
+		exactTime := time.Now().Add(-60 * time.Minute)
+
+		if !isExpired(exactTime) {
+			t.Error("expected timestamp at exactly 60 minutes to be expired")
+		}
+	})
+}
+
+func TestCacheLoadAndSave(t *testing.T) {
+	_ = setupTestEnv(t)
+
+	// Verify load on missing file returns error
+	_, err := loadWeatherCache()
+	if err == nil {
+		t.Error("expected error loading non-existent cache file, got nil")
+	}
+
+	sampleCache := &CachedWeather{
+		Timestamp: time.Now(),
+		Data: WeatherResult{
+			IsDay:       true,
+			MaxTemp:     26.0,
+			MinTemp:     15.0,
+			PrecProb:    10,
+			CurrentTemp: 22.5,
+			CloudCover:  20,
+		},
+	}
+
+	// Save cache to disk
+	saveWeatherCache(sampleCache)
+
+	// Reload cache and verify fields
+	loaded, err := loadWeatherCache()
+	if err != nil {
+		t.Fatalf("loadCache() returned error after saving: %v", err)
+	}
+
+	if !loaded.Data.IsDay {
+		t.Errorf("expected IsDay to be true, got false")
+	}
+	if loaded.Data.CurrentTemp != 22.5 {
+		t.Errorf("expected CurrentTemp 22.5, got %f", loaded.Data.CurrentTemp)
+	}
+	if loaded.Data.MaxTemp != 26.0 || loaded.Data.MinTemp != 15.0 {
+		t.Errorf("unexpected max/min temperatures: max=%f, min=%f", loaded.Data.MaxTemp, loaded.Data.MinTemp)
+	}
+}
+
 // Test fetchWeatherData decoding and error conditions
-func TestFetchWeatherData(t *testing.T) {
+func TestFetchWeatherData_MockHTTP(t *testing.T) {
 	t.Run("Successful API Fetch", func(t *testing.T) {
+		_ = setupTestEnv(t)
+
 		var mockResp APIResponse
 		mockResp.Current.IsDay = 1
 		mockResp.Current.Temperature2m = 22.5
@@ -239,6 +324,8 @@ func TestFetchWeatherData(t *testing.T) {
 	})
 
 	t.Run("HTTP Server Error", func(t *testing.T) {
+		_ = setupTestEnv(t)
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 		}))
@@ -251,6 +338,41 @@ func TestFetchWeatherData(t *testing.T) {
 		_, err := fetchWeatherData(0, 0)
 		if err == nil || !strings.Contains(err.Error(), "non-valid http response") {
 			t.Errorf("expected HTTP error, got: %v", err)
+		}
+	})
+
+	t.Run("HTTP Error with Cache Fallback", func(t *testing.T) {
+		_ = setupTestEnv(t)
+		cachedData := &CachedWeather{
+			Timestamp: time.Now(),
+			Data: WeatherResult{
+				IsDay:       true,
+				MaxTemp:     25.0,
+				MinTemp:     14.0,
+				PrecProb:    5,
+				CurrentTemp: 20.0,
+				CloudCover:  15,
+			},
+		}
+		saveWeatherCache(cachedData)
+
+		//Point weatherBaseURL to the address of a closed server to trigger http error
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		serverURL := server.URL
+		server.Close()
+
+		origURL := weatherBaseURL
+		weatherBaseURL = serverURL
+		defer func() { weatherBaseURL = origURL }()
+
+		// because fetchweatherdata gets a http error, it loads the saved cache
+		result, err := fetchWeatherData(40.4168, -3.7038)
+		if err != nil {
+			t.Fatalf("expected fallback to succeed, got error: %v", err)
+		}
+
+		if result.CurrentTemp != 20.0 {
+			t.Errorf("expected fallback current temp 20.0, got %f", result.CurrentTemp)
 		}
 	})
 }
@@ -267,17 +389,19 @@ func TestRenderWeatherData(t *testing.T) {
 	mockResp.Daily.Temperature2mMax = []float64{22.0}
 	mockResp.Daily.Temperature2mMin = []float64{12.0}
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(mockResp)
-	}))
-	defer server.Close()
-
-	origURL := weatherBaseURL
-	weatherBaseURL = server.URL
-	defer func() { weatherBaseURL = origURL }()
-
 	t.Run("Standard Card Rendering", func(t *testing.T) {
+		_ = setupTestEnv(t)
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(mockResp)
+		}))
+		defer server.Close()
+
+		origURL := weatherBaseURL
+		weatherBaseURL = server.URL
+		defer func() { weatherBaseURL = origURL }()
+
 		out := RenderWeatherData(40.4168, -3.7038, "Madrid", theme, false, globalWidth)
 
 		if !strings.Contains(out, "Madrid") {
@@ -289,6 +413,18 @@ func TestRenderWeatherData(t *testing.T) {
 	})
 
 	t.Run("Mini View Rendering", func(t *testing.T) {
+		_ = setupTestEnv(t)
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(mockResp)
+		}))
+		defer server.Close()
+
+		origURL := weatherBaseURL
+		weatherBaseURL = server.URL
+		defer func() { weatherBaseURL = origURL }()
+
 		out := RenderWeatherData(40.4168, -3.7038, "Madrid", theme, true, globalWidth)
 
 		if !strings.Contains(out, "Madrid: 18.0°C (H: 22.0°C / L: 12.0°C)") {
@@ -297,8 +433,17 @@ func TestRenderWeatherData(t *testing.T) {
 	})
 
 	t.Run("Error Fallback Rendering", func(t *testing.T) {
-		// Point to broken endpoint
-		weatherBaseURL = "http://invalid.invalid"
+		_ = setupTestEnv(t)
+
+		// fake server to receive http error
+		errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer errorServer.Close()
+
+		origURL := weatherBaseURL
+		weatherBaseURL = errorServer.URL
+		defer func() { weatherBaseURL = origURL }()
 
 		out := RenderWeatherData(0, 0, "Unknown", theme, false, globalWidth)
 		if !strings.Contains(out, "Weather Unavailable") {

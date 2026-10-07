@@ -31,8 +31,8 @@ type LocalCache struct {
 	Pool     []Quote `json:"pool"`      // Offline backup pool
 }
 
-// getCachePath returns the file system path to the cache file for the application
-func getCachePath() (string, error) {
+// getQuotesCachePath returns the file system path to the cache file for the application
+func getQuotesCachePath() (string, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
@@ -44,9 +44,9 @@ func getCachePath() (string, error) {
 	return filepath.Join(appCacheDir, "quotes_pool.json"), nil
 }
 
-// loadCache takes the information within the cache file into a LocalCache object
-func loadCache() (*LocalCache, error) {
-	cachePath, err := getCachePath()
+// loadQuotesCache takes the information within the cache file into a LocalCache object
+func loadQuotesCache() (*LocalCache, error) {
+	cachePath, err := getQuotesCachePath()
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +64,9 @@ func loadCache() (*LocalCache, error) {
 	return &cache, nil
 }
 
-// saveCache moves the information from a LocalCache object into the main cache file
-func saveCache(cache *LocalCache) {
-	cachePath, err := getCachePath()
+// saveQuotesCache moves the information from a LocalCache object into the main cache file
+func saveQuotesCache(cache *LocalCache) {
+	cachePath, err := getQuotesCachePath()
 	if err != nil {
 		return
 	}
@@ -107,7 +107,7 @@ func fetchNewBatch() ([]Quote, error) {
 // GetDailyQuote guarantees instant startup by reusing today's quote or picking from the pool.
 func GetDailyQuote() (*Quote, error) {
 	today := time.Now().Format("2006-01-02")
-	cache, err := loadCache()
+	cache, err := loadQuotesCache()
 
 	// Return today's quote if already fetched today
 	if err == nil && cache.LastDate == today && cache.Current.Text != "" {
@@ -136,7 +136,7 @@ func GetDailyQuote() (*Quote, error) {
 	cache.Pool = cache.Pool[1:]
 	cache.LastDate = today
 
-	saveCache(cache)
+	saveQuotesCache(cache)
 
 	return &cache.Current, nil
 }

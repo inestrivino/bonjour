@@ -45,7 +45,7 @@ func mockTheme() *ui.Theme {
 func TestGetCachePath(t *testing.T) {
 	tmpDir := setupTestEnv(t)
 
-	cachePath, err := getCachePath()
+	cachePath, err := getQuotesCachePath()
 	if err != nil {
 		t.Fatalf("getCachePath() returned unexpected error: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestCacheLoadAndSave(t *testing.T) {
 	_ = setupTestEnv(t)
 
 	// Verify load on missing file returns error
-	_, err := loadCache()
+	_, err := loadQuotesCache()
 	if err == nil {
 		t.Error("expected error loading non-existent cache file, got nil")
 	}
@@ -87,10 +87,10 @@ func TestCacheLoadAndSave(t *testing.T) {
 	}
 
 	// Save cache to disk
-	saveCache(sampleCache)
+	saveQuotesCache(sampleCache)
 
 	// Reload cache and verify fields
-	loaded, err := loadCache()
+	loaded, err := loadQuotesCache()
 	if err != nil {
 		t.Fatalf("loadCache() returned error after saving: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestGetDailyQuote(t *testing.T) {
 				Author: "Test Author",
 			},
 		}
-		saveCache(cache)
+		saveQuotesCache(cache)
 
 		quote, err := GetDailyQuote()
 		if err != nil {
@@ -205,7 +205,7 @@ func TestGetDailyQuote(t *testing.T) {
 			Current:  Quote{Text: "Old Quote", Author: "Old Author"},
 			Pool:     []Quote{},
 		}
-		saveCache(cache)
+		saveQuotesCache(cache)
 
 		mockQuotes := []Quote{
 			{Text: "Fresh Quote 1", Author: "New Author 1"},
@@ -231,7 +231,7 @@ func TestGetDailyQuote(t *testing.T) {
 		}
 
 		// Verify pool was popped and saved to disk
-		updatedCache, _ := loadCache()
+		updatedCache, _ := loadQuotesCache()
 		if len(updatedCache.Pool) != 1 {
 			t.Errorf("expected 1 remaining quote in pool, got %d", len(updatedCache.Pool))
 		}
@@ -249,7 +249,7 @@ func TestGetDailyQuote(t *testing.T) {
 			Current:  Quote{Text: "Fallback Stale Quote", Author: "Fallback Author"},
 			Pool:     []Quote{},
 		}
-		saveCache(cache)
+		saveQuotesCache(cache)
 
 		// Point to broken HTTP server
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -303,7 +303,7 @@ func TestRenderQuote(t *testing.T) {
 			Author: "Steve Jobs",
 		},
 	}
-	saveCache(cache)
+	saveQuotesCache(cache)
 
 	t.Run("Standard View Rendering", func(t *testing.T) {
 		out := RenderQuote(theme, false, globalWidth)
